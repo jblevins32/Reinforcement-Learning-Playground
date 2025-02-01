@@ -1,0 +1,4 @@
+num_environments: 30
+t_steps: 100000
+sim: False
+model_dir: "/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml" # Change to the agent you want to train

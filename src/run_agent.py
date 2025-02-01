@@ -1,11 +1,12 @@
 import mujoco
 from mujoco import viewer
-from train import *
-from test import *
+from humanoid.train import *
+from humanoid.test import *
+# import future agent types here
 
-# Load the humanoid
-def run_agent(operation,t_steps,processes,sim=False):
-    model = mujoco.MjModel.from_xml_path("/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml")
+# Load and run the agent
+def RunAgent(operation,t_steps,model_dir,sim=False):
+    model = mujoco.MjModel.from_xml_path(model_dir)
     data = mujoco.MjData(model)
 
     # Train or test with the Mujoco simulation

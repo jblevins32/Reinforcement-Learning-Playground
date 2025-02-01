@@ -1,15 +1,19 @@
-from humanoid_sim import run_agent
+from run_agent import RunAgent
 import multiprocessing
 import time
+from globals import root_directory
+import os
+import yaml
 
 operation = input("Select 1 for Training or 2 for Testing: ")
 
-# Create variables and parallel processes
-num_environments = 30
-t_steps=100000
-sim=False
+# Import args
+config_path = os.path.join(root_directory, "config.yaml")
+with open(config_path, "r") as read_file:
+    config = yaml.safe_load(read_file)
 
-processes = [multiprocessing.Process(target=run_agent,args=(operation,t_steps,num_environments,sim)) for _ in range(num_environments)]
+# Create parallel processes for all environments
+processes = [multiprocessing.Process(target=RunAgent,args=(operation,config['t_steps'],config['model_dir'],config['sim'])) for _ in range(config['num_environments'])]
 
 # For tracking sim times
 time_tracker = {}
