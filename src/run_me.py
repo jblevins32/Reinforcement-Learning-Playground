@@ -1,28 +1,30 @@
-from run_agent import RunAgent
+from agent import RunAgent
 import multiprocessing
 import time
 from globals import root_directory
 import os
 import yaml
 
+# Give user an option to train or test
 operation = input("Select 1 for Training or 2 for Testing: ")
 
-# Import args
+# Import args from config.yaml
 config_path = os.path.join(root_directory, "config.yaml")
 with open(config_path, "r") as read_file:
     config = yaml.safe_load(read_file)
 
-# Create parallel processes for all environments
-processes = [multiprocessing.Process(target=RunAgent,args=(operation,config['t_steps'],config['model_dir'],config['sim'])) for _ in range(config['num_environments'])]
+# Create parallel processes for chosen number of environments
+processes = [multiprocessing.Process(target=RunAgent,args=(operation,config['epochs'],config['t_steps'],config['model_dir'],config['simulator'],config['live_sim'],config['discount'],config['epsilon'])) for _ in range(config['num_environments'])]
 
 # For tracking sim times
 time_tracker = {}
 
-# Main run
+# Start all parallel processes
 for idx, process in enumerate(processes):
     time_tracker[idx] = time.time()
     process.start()
 
+# Wait for all parallel processes to finish
 for idx, process in enumerate(processes):
     print(f"Environment {idx+1} took {time.time()-time_tracker[idx]} seconds.")
     process.join()

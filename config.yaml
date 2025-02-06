@@ -1,4 +1,11 @@
-num_environments: 30
-t_steps: 100000
-sim: False
+# Simulation parameters
+num_environments: 1
+live_sim: True
+simulator: "2dsim" # mujoco or 2dsim
 model_dir: "/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml" # Change to the agent you want to train
+
+# DL training parameters
+discount: 0.99
+epsilon: 0.2
+t_steps: 1
+epochs: 10
