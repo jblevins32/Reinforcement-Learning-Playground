@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from my_simulation.animation import animate
 from my_simulation.obstacle_hit import *
+import torch
 
 class Sim():
     def __init__(self, grid_size):
@@ -10,10 +11,10 @@ class Sim():
         self.distance = 0
         
         # Variables to modify
-        self.obstacle_cost = 100
-        self.direction_weight = 100
-        self.distance_weight = 1000
-        self.collision_weight = 100
+        self.obstacle_cost = 2
+        self.direction_weight = 1
+        self.distance_weight = 1
+        self.collision_weight = 1
 
     def reset(self):
         self.position = self.start
@@ -75,6 +76,11 @@ class Sim():
         # For some reason the costmap is flipped. Spent 2 hours trying to figure out the plotting.
         # position = position[[1,0]]
         # former_position = np.array(former_position)[[1,0]]
+
+        # Convert to numpy array from tensor
+        position = np.array(position)
+        control = np.array(control)
+
         x = position[0][1]
         y = position[0][0]
         
@@ -83,8 +89,8 @@ class Sim():
         
         # Collision cost case 2 precaclulations
         coords = np.round(np.linspace(former_position, position)).astype(int)
-        x_coords = coords[:,1]
-        y_coords = coords[:,0]
+        x_coords = coords[:,0,1]
+        y_coords = coords[:,0,0]
         
         # Case 1 where robot is out of bounds, punished more than normal
         if x < 0 or x >= self.cost_map.shape[0] or y < 0 or y >= self.cost_map.shape[1]:
@@ -102,7 +108,9 @@ class Sim():
         else:
             collision_cost = 0
         
-        direction_cost = -np.dot((self.goal - position) / np.linalg.norm(position - self.goal), control / np.linalg.norm(control))
+        num = (self.goal - position) / np.linalg.norm(position - self.goal)
+        den = control / np.linalg.norm(control)
+        direction_cost = -np.dot(num, den.T)
 
         weighted_direction_cost = self.direction_weight * direction_cost
 
@@ -110,10 +118,10 @@ class Sim():
         
         weighted_collision_cost = self.collision_weight * collision_cost
         
-        return weighted_distance_cost + weighted_collision_cost + weighted_direction_cost
+        return torch.tensor(weighted_distance_cost + weighted_collision_cost + weighted_direction_cost, dtype=torch.float32)
 
     def reached_goal(self, position):
-        if abs(int(position[0]) - self.goal[0]) > 2 or abs(int(position[1]) - self.goal[1]) > 2:
+        if abs(int(position[0,0]) - self.goal[0]) > 2 or abs(int(position[0,1]) - self.goal[1]) > 2:
             return False
         else:
             return True

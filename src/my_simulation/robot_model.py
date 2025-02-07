@@ -1,3 +1,5 @@
+import torch
+
 def RobotModel(old_state, control):
     
     # Model = integrator
@@ -6,4 +8,4 @@ def RobotModel(old_state, control):
     control_gain = 0.5
     state = old_state + control_gain*control
     
-    return state
+    return torch.tensor(state,dtype=torch.float32)

@@ -31,15 +31,16 @@ class animate():
         # plt.pause(5) # uncomment this to see the map
         
     def move(self, cost_map, position):
-        
+        plt.figure("map plot")
+
         # Check for how many obstacles are hit and notify operator
         if ObstacleHit(cost_map, position):
             self.num_obs_hit += 1
             print(f'An obstacle was hit! A total of {self.num_obs_hit} collisions have occured.')
                 
         # Limit the viewing window to around the robot
-        self.x = position[0]
-        self.y = position[1]
+        self.x = position[0,0]
+        self.y = position[0,1]
         self.ax.scatter(self.x,self.y,color='green',linewidth = 2)
         plt.xlim(self.x-20,self.x+20)
         plt.ylim(self.y-20,self.y+20)
