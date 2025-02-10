@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
-from my_simulation.robot_model import RobotModel
+from torch.distributions import categorical
 
 class PPO(nn.Module):
     '''
@@ -23,9 +23,6 @@ class PPO(nn.Module):
             nn.Linear(64, output_dim)
         )
 
-        # Learns the std deviation
-        self.log_std = nn.Parameter(torch.zeros(output_dim))
-
         # Learns the value
         self.critic = nn.Sequential(
             nn.Linear(input_dim, 64),
@@ -37,40 +34,22 @@ class PPO(nn.Module):
 
     def forward(self, x):
         # Parameters for a continuous model
-        mean = self.actor(x)
-        std = torch.exp(self.log_std) # Convert the log_std to std
+        logits = self.actor(x)
         value = self.critic(x)
-        return mean, std, value
+        return logits, value
     
-    def train(self, env, discount, epsilon, buffer):
-        # Step 0: get current state of environment
-        state = torch.tensor(env.position, dtype=torch.float32).unsqueeze(0)
-
-        # Step 1: forward pass on the actor and critic to get action and value
-        mean, std, value = self.forward(state)
-
-        # Step 2: create a distribution from the mean and std
-        gaussian = torch.distributions.Normal(mean, std)
-        action = gaussian.sample()
-
-        # Step 3: take the action in the environment, using the action as a control command to the robot model. 
-        state_new = RobotModel(state,action)
-        reward = env.reward(state_new,state,action)
-        done = env.reached_goal(state_new) # Deternime if the goal is reached
+    def loss_func(self, t, obs_new, reward, discount, value, log_probs, epsilon, buffer):
 
         # Step 4: calculate the advantage
-        _,_, value_new = self.forward(torch.tensor(state_new, dtype=torch.float32))
-        Adv = torch.tensor(reward) + discount * value_new - value
+        _, value_new = self.forward(torch.Tensor(obs_new))
+        Adv = reward + discount * value_new - value
 
-        # Step 5: caluclate probability ratio of taking an action under the current policy vs the old policy (estimate divergence in the two policies)
-        log_prob = gaussian.log_prob(action).sum(dim=-1)
-
-        # Check if there is anything in buffer, if not, use current log prob as old log prob
-        if np.all(buffer.states[0]) == 0:
-            log_prob_old = log_prob
+        # Step 5: get importance sampling ratio. Check if there is anything in buffer, if not, use current log prob as old log prob
+        if np.all(np.array(buffer.states[0])) == 0:
+            log_probs_old = log_probs
         else:
-            log_prob_old = buffer.log_probs[buffer.ptr]
-        r = torch.exp(log_prob - log_prob_old)
+            log_probs_old = buffer.log_probs[t]
+        r = torch.exp(log_probs - log_probs_old)
 
         # Step 6: calculate the surrogate loss
         loss = -torch.min(r*Adv, torch.clamp(r,1-epsilon,1+epsilon)*Adv)
@@ -79,9 +58,29 @@ class PPO(nn.Module):
         critic_loss = F.mse_loss(value, reward + discount * value_new.detach())
 
         # Step 8: Total loss
-        total_loss = loss + critic_loss
+        return loss + critic_loss
 
-        # Step 9: Update buffer with this experience
-        buffer.store(state,action,reward,state_new,done,log_prob,value)
+    def train(self, t, env, obs, discount, epsilon, buffer):
 
-        return total_loss, state_new, reward
+        # Step 1: forward pass on the actor and critic to get action and value
+        with torch.enable_grad():
+            logits, value = self.forward(obs)
+
+        # Step 2: create a distribution from the logits (raw outputs) and sample from it
+        # probs = torch.distributions.Normal(mean, std)
+        # probs = torch.distributions.MultivariateNormal(mean, covariance_matrix=)
+        probs = categorical.Categorical(logits=logits)
+        action = probs.sample()
+        log_probs = probs.log_prob(action)
+
+        # Step 3: take the action in the environment, using the action as a control command to the robot model. 
+        obs_new, reward, done, truncated, infos = env.step(action.numpy())
+        
+        # old stuff from my env that needs to be updated
+        # reward = env.reward(state_new,state,action)
+        # done = env.reached_goal(state_new) # Deternime if the goal is reached
+
+        # Step 9 store data in buffer
+        buffer.store(t, obs, action, reward, log_probs, done)
+
+        return env, torch.Tensor(obs_new), buffer

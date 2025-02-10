@@ -44,7 +44,7 @@ class animate():
         self.ax.scatter(self.x,self.y,color='green',linewidth = 2)
         plt.xlim(self.x-20,self.x+20)
         plt.ylim(self.y-20,self.y+20)
-        plt.pause(.0001)
+        plt.pause(10)
         
     def predict(self, prediction, cost):
         

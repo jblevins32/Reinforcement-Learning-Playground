@@ -11,7 +11,7 @@ with open(config_path, "r") as read_file:
     config = yaml.safe_load(read_file)
 
 # Create parallel processes for chosen number of environments
-processes = [multiprocessing.Process(target=RunAgent,args=(config['operation'],config['epochs'],config['t_steps'],config['model_dir'],config['simulator'],config['live_sim'],config['discount'],config['epsilon'],config['lr'])) for _ in range(config['num_environments'])]
+processes = [multiprocessing.Process(target=RunAgent,args=(config['operation'],config['num_environments'],config['epochs'],config['t_steps'],config['model_dir'],config['env'],config['live_sim'],config['discount'],config['epsilon'],config['lr'])) for _ in range(config['num_environments'])]
 
 # For tracking sim times
 time_tracker = {}
