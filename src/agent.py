@@ -6,6 +6,9 @@ from test import *
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 from buffer import *
+# from torch.utils.tensorboard import SummaryWriter
+# import time
+# import subprocess
 
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
@@ -23,11 +26,19 @@ def Agent(rl_alg,operation,num_environments,epochs,t_steps,env,n_obs,n_actions,d
 
     # Choose RL algorithm
     if rl_alg == "PPO":
-        rl_alg = PPO(input_dim=n_obs, output_dim=n_actions, discount=discount, epsilon=epsilon)
+        rl_alg = PPO(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
     elif rl_alg == "REINFORCE":
         rl_alg = REINFORCE(input_dim=n_obs, output_dim=n_actions)
     elif rl_alg == "VPG":
         rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
+
+    # Tensor board setup
+    # log_dir=f'runs/{rl_alg.name}'
+    # writer = SummaryWriter(log_dir=log_dir)
+    # tensorboard_process = subprocess.Popen(["tensorboard", "--logdir", log_dir, "--port", "6006"])
+    # time.sleep(3)
+    # import webbrowser
+    # webbrowser.open("http://localhost:6006")
 
     # Choose optimizer
     optimizer = Adam(params=rl_alg.parameters(), lr=lr)
@@ -50,21 +61,25 @@ def Agent(rl_alg,operation,num_environments,epochs,t_steps,env,n_obs,n_actions,d
                 env, obs, buffer = rl_alg.train(t, env, obs, buffer)
 
                 # For visualization
-                frames.append(env.render()[0])
+                # frames.append(env.render()[0])
 
         # Get total expected return from the rollout in this epoch
         buffer.calc_returns()
-        loss = rl_alg.loss_func(buffer)
 
         # Update networks
         update_epochs = 10 if rl_alg.name == "PPO" else 1
 
         for _ in range(update_epochs):
+            loss = rl_alg.loss_func(buffer)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()   
 
         buffer.detach()
+
+        # Update Tensorboard
+        # writer.add_scalar("Reward", buffer.rewards.mean(), epoch)
+        # writer.flush()
 
         # anim.move(env.cost_map, env.position)
 
@@ -83,7 +98,6 @@ def Agent(rl_alg,operation,num_environments,epochs,t_steps,env,n_obs,n_actions,d
             plt.axis('off')
             plt.pause(.000001)
 
-    print("Training Complete!")
 
     # Train or test without the Mujoco simulation
     # else:

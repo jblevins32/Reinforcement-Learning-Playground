@@ -71,4 +71,4 @@ elif config['env'] == "gym":
     # Start Training
     Agent(*args)
 
-print("Done!")
+print("Training Complete!")

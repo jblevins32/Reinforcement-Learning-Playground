@@ -16,4 +16,4 @@ epsilon: 0.2
 t_steps: 256
 epochs: 250
 lr: .001
-rl_alg: "REINFORCE"
+rl_alg: "PPO"
