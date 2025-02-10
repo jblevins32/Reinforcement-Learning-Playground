@@ -2,12 +2,18 @@
 num_environments: 1
 live_sim: False
 env: "gym" # mujoco or 2dsim or gym
-model_dir: "/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml" # Change to the agent you want to train
 operation: "train" # train or test
+
+# If using Mujoco
+muj_model_dir: "/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml" # Change to the agent you want to train
+
+# If using gym (num_envs must be 1 right now)
+gym_model: "CartPole-v1" # Change to the agent you want to train
 
 # DL training parameters
 discount: 0.99
 epsilon: 0.2
-t_steps: 250
+t_steps: 256
 epochs: 250
 lr: .001
+rl_alg: "REINFORCE"

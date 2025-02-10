@@ -5,13 +5,13 @@ import torch.nn.functional as F
 import numpy as np
 from torch.distributions import categorical
 
-class PPO(nn.Module):
+class VPG(nn.Module):
     '''
     The goal of PPO is to improve training stability of a policy by limiting the changes that can be made to a policy.
         - smaller updates are more likely to converge to an optimal solutions
         - large jumps can fall off of a cliff
     '''
-    def __init__(self, input_dim, output_dim, discount, epsilon):
+    def __init__(self, input_dim, output_dim):
         super(PPO, self).__init__()
         
         # Learns the mean

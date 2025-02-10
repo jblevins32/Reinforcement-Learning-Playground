@@ -1,7 +1,7 @@
 import torch
 from copy import deepcopy
 
-class TrajData:
+class Buffer:
     def __init__(self, n_steps, n_envs, n_obs, n_actions):
         s, e, o, a = n_steps, n_envs, n_obs, n_actions
         from torch import zeros
