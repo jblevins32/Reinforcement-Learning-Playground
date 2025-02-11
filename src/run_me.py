@@ -20,7 +20,7 @@ with open(config_path, "r") as read_file:
 # Arguments to all sim environments
 args = (config['rl_alg'],config['operation'],config['num_environments'],config['epochs'],config['t_steps'],config['discount'],config['epsilon'],config['lr'],config['live_sim'])
 
-############################# Load the chosen environment #############################
+############################# Load the chosen environment and start training or inference #############################
 # MuJoCo
 if config['env'] == "mujoco":
     model = mujoco.MjModel.from_xml_path(config['muj_model_dir'])
@@ -69,6 +69,30 @@ elif config['env'] == "gym":
     args = args[:5] + (env,n_obs,n_actions) + args[5:]
 
     # Start Training
-    Agent(*args)
+    agent = Agent(*args)
+    agent.train()
+
+elif config['env'] == "gym_adv":
+    env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
+    
+    # Define the observation space and action space sizes
+    n_actions = int(env.action_space.nvec[0])
+    n_obs = env._observations[0].shape[0]
+
+    # Add new variables to args
+    args = args[:5] + (env,n_obs,n_actions) + args[5:]
+
+    args1 = args
+    args = list(args)
+    args[0] = config['rl_alg_adv']
+    args2 = tuple(args)
+
+    # Start Training
+    for _ in range(config['adv_iter']):
+        agent1 = Agent(*args1)
+        agent2 = Agent(*args2)
+
+        agent1.train_adv(adversary = agent2.rl_alg)
+        agent2.train_adv(adversary = agent1.rl_alg)
 
 print("Training Complete!")

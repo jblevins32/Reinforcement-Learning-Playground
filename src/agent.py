@@ -13,91 +13,210 @@ from buffer import *
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo import *
+from RL_algorithms.ppo_adv import *
 
 ############################################################################################################
 
 # Load and run the agent
-def Agent(rl_alg,operation,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, live_sim):
+class Agent():
+    def __init__(self, rl_alg,operation,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, live_sim):
 
-    # Initialize plot variables
-    epoch_vec = []
-    reward_vec = []
-    frames = []
+        # Initialize plot variables
+        self.epoch_vec = []
+        self.reward_vec = []
+        self.frames = []
 
-    # Choose RL algorithm
-    if rl_alg == "PPO":
-        rl_alg = PPO(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
-    elif rl_alg == "REINFORCE":
-        rl_alg = REINFORCE(input_dim=n_obs, output_dim=n_actions)
-    elif rl_alg == "VPG":
-        rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
+        self.operation = operation
+        self.epochs = epochs
+        self.env = env
+        self.discount = discount
+        self.live_sim = live_sim
+        self.t_steps = t_steps
 
-    # Tensor board setup
-    # log_dir=f'runs/{rl_alg.name}'
-    # writer = SummaryWriter(log_dir=log_dir)
-    # tensorboard_process = subprocess.Popen(["tensorboard", "--logdir", log_dir, "--port", "6006"])
-    # time.sleep(3)
-    # import webbrowser
-    # webbrowser.open("http://localhost:6006")
+        # Choose RL algorithm
+        if rl_alg == "PPO":
+            self.rl_alg = PPO(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
+        elif rl_alg == "REINFORCE":
+            self.rl_alg = REINFORCE(input_dim=n_obs, output_dim=n_actions)
+        elif rl_alg == "VPG":
+            self.rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
+        elif rl_alg =="PPO_ADV":
+            self.rl_alg = PPO_ADV(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
 
-    # Choose optimizer
-    optimizer = Adam(params=rl_alg.parameters(), lr=lr)
+        # Tensor board setup
+        # log_dir=f'runs/{rl_alg.name}'
+        # writer = SummaryWriter(log_dir=log_dir)
+        # tensorboard_process = subprocess.Popen(["tensorboard", "--logdir", log_dir, "--port", "6006"])
+        # time.sleep(3)
+        # import webbrowser
+        # webbrowser.open("http://localhost:6006")
 
-    # Create buffer
-    buffer = Buffer(n_steps=t_steps, n_envs=num_environments, n_obs=4, n_actions=1)
+        # Choose optimizer
+        self.optimizer = Adam(params=self.rl_alg.parameters(), lr=lr)
+
+        # Create buffer
+        self.buffer = Buffer(n_steps=self.t_steps, n_envs=num_environments, n_obs=4, n_actions=1)
     
-    # Running for n epochs
-    for epoch in range(epochs):
-        print(f"Beginning Epoch {epoch+1}")
-        
-        # Reset the environment at beginning of each epoch
-        obs, _ = env.reset()
-        obs = torch.Tensor(obs)
+    def train(self):
+        # Running for n epochs
+        for epoch in range(self.epochs):
+            print(f"Beginning Epoch {epoch+1}")
+            
+            # Reset the environment at beginning of each epoch
+            obs, _ = self.env.reset()
+            obs = torch.Tensor(obs)
 
-        # Rollout for t timesteps
-        for t in range(t_steps):
-            # Train or Test the agent
-            if operation == "train":
-                env, obs, buffer = rl_alg.train(t, env, obs, buffer)
+            # Rollout 
+            self.rollout(obs)
 
-                # For visualization
-                # frames.append(env.render()[0])
+            # Update parameters
+            self.update()
 
-        # Get total expected return from the rollout in this epoch
-        buffer.calc_returns()
+            # Update Tensorboard
+            # writer.add_scalar("Reward", buffer.rewards.mean(), epoch)
+            # writer.flush()
 
-        # Update networks
-        update_epochs = 10 if rl_alg.name == "PPO" else 1
+            # anim.move(env.cost_map, env.position)
 
-        for _ in range(update_epochs):
-            loss = rl_alg.loss_func(buffer)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()   
+            # Plot 
 
-        buffer.detach()
+            if self.rl_alg.name == "PPO_ADV":
+                color = "red"
+            else:
+                color = "blue"
 
-        # Update Tensorboard
-        # writer.add_scalar("Reward", buffer.rewards.mean(), epoch)
-        # writer.flush()
-
-        # anim.move(env.cost_map, env.position)
-
-        # Plot 
-        epoch_vec.append(epoch)
-        reward_vec.append(buffer.rewards.mean())
-        plt.figure('Reward Plot')
-        plt.plot(epoch_vec, reward_vec, color="blue")
-        plt.xlabel('epoch')
-        plt.ylabel('reward')
-        plt.pause(.000001)
-
-        if live_sim == True:
-            plt.figure('Environment')
-            plt.imshow(frames[-1])
-            plt.axis('off')
+            self.epoch_vec.append(epoch)
+            self.reward_vec.append(self.buffer.rewards.mean())
+            plt.figure('Reward Plot')
+            plt.plot(self.epoch_vec, self.reward_vec, color)
+            plt.xlabel('epoch')
+            plt.ylabel('reward')
             plt.pause(.000001)
 
+            # if self.live_sim == True:
+            #     plt.figure('Environment')
+            #     plt.imshow(frames[-1])
+            #     plt.axis('off')
+            #     plt.pause(.000001)
+
+    def train_adv(self, adversary):
+        # Running for n epochs
+        for epoch in range(self.epochs):
+            print(f"Beginning Epoch {epoch+1}")
+            
+            # Reset the environment at beginning of each epoch
+            obs, _ = self.env.reset()
+            obs = torch.Tensor(obs)
+
+            # Rollout 
+            self.rollout_adv(obs, adversary)
+
+            # Update parameters
+            self.update()
+
+            # Update Tensorboard
+            # writer.add_scalar("Reward", buffer.rewards.mean(), epoch)
+            # writer.flush()
+
+            # anim.move(env.cost_map, env.position)
+
+            # Plot 
+
+            if self.rl_alg.name == "PPO_ADV":
+                color = "red"
+            else:
+                color = "blue"
+
+            self.epoch_vec.append(epoch)
+            self.reward_vec.append(self.buffer.rewards.mean())
+            plt.figure('Reward Plot')
+            plt.plot(self.epoch_vec, self.reward_vec, color)
+            plt.xlabel('epoch')
+            plt.ylabel('reward')
+            plt.pause(.000001)
+
+            # if self.live_sim == True:
+            #     plt.figure('Environment')
+            #     plt.imshow(frames[-1])
+            #     plt.axis('off')
+            #     plt.pause(.000001)
+
+    def update(self):
+        # Get total expected return from the rollout in this epoch
+        self.buffer.calc_returns()
+
+        # Update networks
+        update_epochs = 10 if ((self.rl_alg.name == "PPO") | (self.rl_alg.name == "PPO_ADV")) else 1
+
+        for _ in range(update_epochs):
+            loss = self.rl_alg.loss_func(self.buffer)
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()   
+
+        self.buffer.detach()
+
+    def rollout(self, obs):
+        # Rollout for t timesteps
+        for t in range(self.t_steps):
+
+            # Step 1: forward pass on the actor and critic to get action and value
+            with torch.no_grad() if self.rl_alg.name == 'PPO' else torch.enable_grad():
+                logits = self.rl_alg.policy(obs)
+
+            # Step 2: create a distribution from the logits (raw outputs) and sample from it
+            probs = categorical.Categorical(logits=logits)
+            actions = probs.sample()
+            log_probs = probs.log_prob(actions)
+
+            # Step 3: take the action in the environment, using the action as a control command to the robot model. 
+            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())
+            done = done | truncated # Change done if the episode is truncated
+
+            # Step 4: store data in buffer
+            self.buffer.store(t, obs, actions, reward, log_probs, done)
+            obs = torch.Tensor(obs_new)
+
+
+            # For visualization
+            # frames.append(env.render()[0])
+
+    def rollout_adv(self, obs, adversary):
+        # Rollout for t timesteps
+        for t in range(self.t_steps):
+
+            with torch.no_grad() if ((self.rl_alg.name == 'PPO') | (self.rl_alg.name == 'PPO_ADV')) else torch.enable_grad():
+                logits = self.rl_alg.policy(obs)
+
+            probs = categorical.Categorical(logits=logits)
+            actions = probs.sample()
+            log_probs = probs.log_prob(actions)
+
+            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())
+            done = done | truncated # Change done if the episode is truncated
+
+            if self.rl_alg.name == 'PPO':
+                self.buffer.store(t, obs, actions, reward, log_probs, done)
+
+            obs = torch.Tensor(obs_new)
+
+            with torch.no_grad() if ((self.rl_alg.name == 'PPO') | (self.rl_alg.name == 'PPO_ADV')) else torch.enable_grad():
+                logits_adv = adversary.policy(obs)
+
+            probs_adv = categorical.Categorical(logits=logits_adv)
+            actions_adv = probs_adv.sample()
+            log_probs_adv = probs_adv.log_prob(actions_adv)
+
+            obs_new, reward, done, truncated, infos = self.env.step(actions_adv.numpy())
+            done = done | truncated # Change done if the episode is truncated
+
+            if self.rl_alg.name == 'PPO_ADV':
+                self.buffer.store(t, obs, actions_adv, reward, log_probs_adv, done)
+
+            obs = torch.Tensor(obs_new)
+
+            # For visualization
+            # frames.append(env.render()[0])
 
     # Train or test without the Mujoco simulation
     # else:

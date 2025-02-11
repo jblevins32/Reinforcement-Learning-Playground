@@ -5,17 +5,17 @@ import torch.nn.functional as F
 import numpy as np
 from torch.distributions import categorical
 
-class PPO(nn.Module):
+class PPO_ADV(nn.Module):
     '''
     The goal of PPO is to improve training stability of a policy by limiting the changes that can be made to a policy.
         - smaller updates are more likely to converge to an optimal solutions
         - large jumps can fall off of a cliff
     '''
     def __init__(self, input_dim, output_dim, epsilon):
-        super(PPO, self).__init__()
+        super(PPO_ADV, self).__init__()
         
         self.epsilon = epsilon
-        self.name = "PPO"
+        self.name = "PPO_ADV"
 
         # Learns the mean
         self.policy = nn.Sequential(
@@ -54,4 +54,4 @@ class PPO(nn.Module):
 
         loss = loss_value + loss_policy
 
-        return loss
+        return -loss
