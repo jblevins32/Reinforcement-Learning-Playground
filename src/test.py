@@ -38,14 +38,16 @@ elif config['rl_alg'] =="PPO_CONT":
     rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, epsilon=config['epsilon'])
 
 # Load the model parameters
-model_dir = os.path.join(root_dir,"models",f"{config['gym_model']}_{config['rl_alg']}_2.12313.pth")
+model_dir = os.path.join(root_dir,"models",f"{config['gym_model']}_{config['rl_alg']}_-0.51478.pth")
 rl_alg.load_state_dict(torch.load(model_dir))
 
 # Run inference and record video
 obs = env.reset()
 obs = obs[0]
 done = False
-while not done:
+count_steps = 0
+for _ in range(400):
+    count_steps += 1
     with torch.no_grad():
         mean = rl_alg.policy(torch.Tensor(obs))
         std = torch.exp(rl_alg.log_std)
@@ -53,7 +55,7 @@ while not done:
         action = dist.sample().numpy()
 
     obs, reward, done, truncated, _ = env.step(action)
-    print('step taken')
+    print(f'step taken {count_steps}')
     done = done or truncated
 
 env.close()

@@ -8,7 +8,7 @@ operation: "train" # train or test
 muj_model_dir: "/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml" # Change to the agent you want to train
 
 # If using gym (num_envs must be 1 right now)
-gym_model: "Pusher-v5" # "HalfCheetah-v5" "MountainCar-v0" "CartPole-v1" "Ant-v5"
+gym_model: "Humanoid-v5" # "Pusher-v5" "HalfCheetah-v5" "MountainCar-v0" "CartPole-v1" "Ant-v5"
 
 # Recording parameters
 record: False
