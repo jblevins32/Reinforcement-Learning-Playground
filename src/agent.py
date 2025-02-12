@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from buffer import *
 from torch.utils.tensorboard import SummaryWriter
 import webbrowser
+from globals import root_dir
+import os
+import subprocess
 
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
@@ -46,9 +49,15 @@ class Agent():
             self.rl_alg = PPO_ADV(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
 
         # Tensor board setup
-        log_dir=f"tensorboard/{self.rl_alg.name}"
+        log_dir=os.path.join(root_dir,"tensorboard",self.rl_alg.name)
+
+        # Start the tensorboard
+        tensorboard_cmd = f"tensorboard --logdir={log_dir} --port=6006 --bind_all"
+        subprocess.Popen(tensorboard_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Create the writer
         self.writer = SummaryWriter(log_dir=log_dir, comment=f"_{self.rl_alg.name}")
-        webbrowser.open("http://localhost:6008")
+        webbrowser.open("http://localhost:6006")
 
         # Choose optimizer
         self.optimizer = Adam(params=self.rl_alg.parameters(), lr=lr)

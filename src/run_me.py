@@ -1,21 +1,21 @@
 from agent import Agent
 import multiprocessing
 import time
-from globals import root_directory
 import os
 import yaml
 import mujoco
 from mujoco import viewer
 import gymnasium as gym
 from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
+from globals import root_dir
 
 # 2D Simulation imports
 from my_simulation.sim import *
 from my_simulation.animation import *
 
 ############################# Import args from config.yaml #############################
-config_path = os.path.join(root_directory, "config.yaml")
-with open(config_path, "r") as read_file:
+config_dir = os.path.join(root_dir, "config.yaml")
+with open(config_dir, "r") as read_file:
     config = yaml.safe_load(read_file)
 
 # Arguments to all sim environments
@@ -69,7 +69,8 @@ elif config['env'] == "gym":
 
         # Recording video parameters
         num_training_episodes = config['epochs']  # total number of training episodes
-        env = RecordVideo(env, video_folder=f"videos/{config['gym_model']}/{config['rl_alg']}", name_prefix="training",
+        video_dir = os.path.join(root_dir, "videos", config['gym_model'], config['rl_alg'])
+        env = RecordVideo(env, video_folder=video_dir, name_prefix="training",
                             episode_trigger=lambda x: x % config['record_period'] == 0)
         env = RecordEpisodeStatistics(env)
 

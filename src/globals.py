@@ -1,3 +1,5 @@
 import os
 
-root_directory = os.path.abspath(os.path.join(__file__ ,"../../"))
+root_dir = os.path.abspath(os.path.join(__file__ ,"../../"))
+
+print(root_dir)
