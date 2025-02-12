@@ -7,7 +7,7 @@ class Buffer:
         from torch import zeros
 
         self.states = zeros((s, e, o))
-        self.actions = zeros((s, e))
+        self.actions = zeros((s, e, a))
         self.rewards = zeros((s, e))
         self.not_dones = zeros((s, e))
 

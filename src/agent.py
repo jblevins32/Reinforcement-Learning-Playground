@@ -2,7 +2,6 @@
 import mujoco
 from mujoco import viewer
 import gymnasium as gym
-from test import *
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 from buffer import *
@@ -11,11 +10,12 @@ import webbrowser
 from globals import root_dir
 import os
 import subprocess
-
+from torch.distributions import Normal
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo import *
 from RL_algorithms.ppo_adv import *
+from RL_algorithms.ppo_cont import *
 
 
 
@@ -47,6 +47,8 @@ class Agent():
             self.rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
         elif rl_alg =="PPO_ADV":
             self.rl_alg = PPO_ADV(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
+        elif rl_alg =="PPO_CONT":
+            self.rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
 
         # Tensor board setup
         log_dir=os.path.join(root_dir,"tensorboard",self.rl_alg.name)
@@ -75,7 +77,7 @@ class Agent():
             obs = torch.Tensor(obs)
 
             # Rollout 
-            self.rollout(obs)
+            self.rollout_cont(obs)
 
             # Update parameters
             self.update()
@@ -121,6 +123,28 @@ class Agent():
             probs = categorical.Categorical(logits=logits)
             actions = probs.sample()
             log_probs = probs.log_prob(actions)
+
+            # Step 3: take the action in the environment, using the action as a control command to the robot model. 
+            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())
+            done = done | truncated # Change done if the episode is truncated
+
+            # Step 4: store data in buffer
+            self.buffer.store(t, obs, actions, reward, log_probs, done)
+            obs = torch.Tensor(obs_new)
+
+    def rollout_cont(self, obs):
+        # Rollout for t timesteps
+        for t in range(self.t_steps):
+
+            # Step 1: forward pass on the actor and critic to get action and value
+            with torch.no_grad() if self.rl_alg.name == 'PPO_CONT' else torch.enable_grad():
+                mean = self.rl_alg.policy(obs)
+                std = torch.exp(self.rl_alg.log_std)
+
+            # Step 2: create a distribution from the logits (raw outputs) and sample from it
+            dist = Normal(mean, std)
+            actions = dist.sample()
+            log_probs = dist.log_prob(actions).sum(dim=-1)
 
             # Step 3: take the action in the environment, using the action as a control command to the robot model. 
             obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())

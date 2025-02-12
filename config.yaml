@@ -1,5 +1,5 @@
 # Simulation parameters
-num_environments: 64
+num_environments: 1
 live_sim: False
 env: "gym" # mujoco or 2dsim or gym
 operation: "train" # train or test
@@ -8,7 +8,7 @@ operation: "train" # train or test
 muj_model_dir: "/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml" # Change to the agent you want to train
 
 # If using gym (num_envs must be 1 right now)
-gym_model: "MountainCar-v0" #"CartPole-v1" #  "Ant-v5"
+gym_model: "HalfCheetah-v5" #"MountainCar-v0" "CartPole-v1" "Ant-v5"
 
 # Recording parameters
 record: False
@@ -18,9 +18,9 @@ record_period: 50 # How many epochs to save the video
 discount: 0.99
 epsilon: 0.2
 t_steps: 256
-epochs: 2001
+epochs: 10
 lr: .001
-rl_alg: "PPO"
+rl_alg: "PPO_CONT"
 
 # Adversarial parameters
 rl_alg_adv: "PPO_ADV"

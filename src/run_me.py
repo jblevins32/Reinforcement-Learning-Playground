@@ -8,15 +8,14 @@ from mujoco import viewer
 import gymnasium as gym
 from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 from globals import root_dir
+from get_params import GetParams
 
 # 2D Simulation imports
 from my_simulation.sim import *
 from my_simulation.animation import *
 
 ############################# Import args from config.yaml #############################
-config_dir = os.path.join(root_dir, "config.yaml")
-with open(config_dir, "r") as read_file:
-    config = yaml.safe_load(read_file)
+config = GetParams()
 
 # Arguments to all sim environments
 args = (config['rl_alg'],config['operation'],config['num_environments'],config['epochs'],config['t_steps'],config['discount'],config['epsilon'],config['lr'],config['live_sim'])
@@ -64,7 +63,7 @@ elif config['env'] == "gym":
     # Only use one env for recording
     if config['record']:
         env = gym.make(config['gym_model'], render_mode="rgb_array")
-        n_actions = int(env.action_space.n)
+        n_actions = env.action_space.shape[0] #int(env.action_space.n)
         n_obs = env.observation_space.shape[0]
 
         # Recording video parameters
@@ -76,8 +75,8 @@ elif config['env'] == "gym":
 
     else:
         env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
-        n_actions = int(env.action_space.nvec[0])
-        n_obs = env._observations[0].shape[0]
+        n_actions = env.action_space.shape[1] #int(env.action_space.nvec[0])
+        n_obs = env.observation_space.shape[1] # env._observations[0].shape[0]
 
     # Add new variables to args
     args = args[:5] + (env,n_obs,n_actions) + args[5:]
@@ -85,6 +84,11 @@ elif config['env'] == "gym":
     # Start Training
     agent = Agent(*args)
     agent.train()
+
+    # Save the model
+    model_dir = os.path.join(root_dir,"models",f"{config['gym_model']}_{config['rl_alg']}.pth")
+    os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
+    torch.save(agent.rl_alg.state_dict(),model_dir)
 
     env.close()
 

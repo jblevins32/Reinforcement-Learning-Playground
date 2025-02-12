@@ -1,18 +1,18 @@
 import torch
 import torch.nn as nn
-from torch.distributions import categorical
+from torch.distributions import Normal
 
-class PPO(nn.Module):
+class PPO_CONT(nn.Module):
     '''
     The goal of PPO is to improve training stability of a policy by limiting the changes that can be made to a policy.
         - smaller updates are more likely to converge to an optimal solutions
         - large jumps can fall off of a cliff
     '''
     def __init__(self, input_dim, output_dim, epsilon):
-        super(PPO, self).__init__()
+        super(PPO_CONT, self).__init__()
         
         self.epsilon = epsilon
-        self.name = "PPO"
+        self.name = "PPO_CONT"
 
         # Learns the mean
         self.policy = nn.Sequential(
@@ -31,19 +31,22 @@ class PPO(nn.Module):
             nn.ReLU(),
             nn.Linear(64, 1)
         )
+
+        self.log_std = nn.Parameter(torch.zeros(output_dim))
     
     def loss_func(self, buffer):
 
-        logits = self.policy(buffer.states)
+        mean = self.policy(buffer.states)
         value = self.critic(buffer.states)
+        std = torch.exp(self.log_std)
 
+        # Create the distribution
+        dist = Normal(mean, std)
+        
         adv = buffer.returns - value.squeeze(-1)
         loss_value = torch.mean(adv**2)
 
-        # importance sampling. logs turned this into a subtraction
-        # First, get probability distribution of the updated policy. Second, get the log probabilities of the same actions taken in the old policy.
-        probs = categorical.Categorical(logits=logits)
-        new_log_probs = probs.log_prob(buffer.actions)
+        new_log_probs = dist.log_prob(buffer.actions).sum(dim=-1)
 
         r = torch.exp(new_log_probs - buffer.log_probs)
 
