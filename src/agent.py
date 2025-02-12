@@ -6,14 +6,16 @@ from test import *
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 from buffer import *
-# from torch.utils.tensorboard import SummaryWriter
-# import time
-# import subprocess
+from torch.utils.tensorboard import SummaryWriter
+import webbrowser
 
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo import *
 from RL_algorithms.ppo_adv import *
+
+
+
 
 ############################################################################################################
 
@@ -44,18 +46,15 @@ class Agent():
             self.rl_alg = PPO_ADV(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
 
         # Tensor board setup
-        # log_dir=f'runs/{rl_alg.name}'
-        # writer = SummaryWriter(log_dir=log_dir)
-        # tensorboard_process = subprocess.Popen(["tensorboard", "--logdir", log_dir, "--port", "6006"])
-        # time.sleep(3)
-        # import webbrowser
-        # webbrowser.open("http://localhost:6006")
+        log_dir=f"tensorboard/{self.rl_alg.name}"
+        self.writer = SummaryWriter(log_dir=log_dir, comment=f"_{self.rl_alg.name}")
+        webbrowser.open("http://localhost:6008")
 
         # Choose optimizer
         self.optimizer = Adam(params=self.rl_alg.parameters(), lr=lr)
 
         # Create buffer
-        self.buffer = Buffer(n_steps=self.t_steps, n_envs=num_environments, n_obs=4, n_actions=1)
+        self.buffer = Buffer(n_steps=self.t_steps, n_envs=num_environments, n_obs=n_obs, n_actions=n_actions)
     
     def train(self):
         # Running for n epochs
@@ -73,67 +72,12 @@ class Agent():
             self.update()
 
             # Update Tensorboard
-            # writer.add_scalar("Reward", buffer.rewards.mean(), epoch)
-            # writer.flush()
-
-            # anim.move(env.cost_map, env.position)
-
-            # Plot 
-
-            if self.rl_alg.name == "PPO_ADV":
-                color = "red"
-            else:
-                color = "blue"
-
-            self.epoch_vec.append(epoch)
-            self.reward_vec.append(self.buffer.rewards.mean())
-            plt.figure('Reward Plot')
-            plt.plot(self.epoch_vec, self.reward_vec, color)
-            plt.xlabel('epoch')
-            plt.ylabel('reward')
-            plt.pause(.000001)
-
-            # if self.live_sim == True:
-            #     plt.figure('Environment')
-            #     plt.imshow(frames[-1])
-            #     plt.axis('off')
-            #     plt.pause(.000001)
-
-    def train_adv(self, adversary):
-        # Running for n epochs
-        for epoch in range(self.epochs):
-            print(f"Beginning Epoch {epoch+1}")
+            self.writer.add_scalar("Reward", self.buffer.rewards.mean(), epoch)
+            self.writer.flush()
             
-            # Reset the environment at beginning of each epoch
-            obs, _ = self.env.reset()
-            obs = torch.Tensor(obs)
-
-            # Rollout 
-            self.rollout_adv(obs, adversary)
-
-            # Update parameters
-            self.update()
-
-            # Update Tensorboard
-            # writer.add_scalar("Reward", buffer.rewards.mean(), epoch)
-            # writer.flush()
-
             # anim.move(env.cost_map, env.position)
 
-            # Plot 
-
-            if self.rl_alg.name == "PPO_ADV":
-                color = "red"
-            else:
-                color = "blue"
-
-            self.epoch_vec.append(epoch)
-            self.reward_vec.append(self.buffer.rewards.mean())
-            plt.figure('Reward Plot')
-            plt.plot(self.epoch_vec, self.reward_vec, color)
-            plt.xlabel('epoch')
-            plt.ylabel('reward')
-            plt.pause(.000001)
+            self.plot_reward(epoch)
 
             # if self.live_sim == True:
             #     plt.figure('Environment')
@@ -181,43 +125,6 @@ class Agent():
             # For visualization
             # frames.append(env.render()[0])
 
-    def rollout_adv(self, obs, adversary):
-        # Rollout for t timesteps
-        for t in range(self.t_steps):
-
-            with torch.no_grad() if ((self.rl_alg.name == 'PPO') | (self.rl_alg.name == 'PPO_ADV')) else torch.enable_grad():
-                logits = self.rl_alg.policy(obs)
-
-            probs = categorical.Categorical(logits=logits)
-            actions = probs.sample()
-            log_probs = probs.log_prob(actions)
-
-            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())
-            done = done | truncated # Change done if the episode is truncated
-
-            if self.rl_alg.name == 'PPO':
-                self.buffer.store(t, obs, actions, reward, log_probs, done)
-
-            obs = torch.Tensor(obs_new)
-
-            with torch.no_grad() if ((self.rl_alg.name == 'PPO') | (self.rl_alg.name == 'PPO_ADV')) else torch.enable_grad():
-                logits_adv = adversary.policy(obs)
-
-            probs_adv = categorical.Categorical(logits=logits_adv)
-            actions_adv = probs_adv.sample()
-            log_probs_adv = probs_adv.log_prob(actions_adv)
-
-            obs_new, reward, done, truncated, infos = self.env.step(actions_adv.numpy())
-            done = done | truncated # Change done if the episode is truncated
-
-            if self.rl_alg.name == 'PPO_ADV':
-                self.buffer.store(t, obs, actions_adv, reward, log_probs_adv, done)
-
-            obs = torch.Tensor(obs_new)
-
-            # For visualization
-            # frames.append(env.render()[0])
-
     # Train or test without the Mujoco simulation
     # else:
         # with viewer.launch_passive(model, data) as v:\
@@ -234,3 +141,75 @@ class Agent():
         #         # Step Mujoco
         #         mujoco.mj_step(model, data)
                 #   v.step()
+
+    def plot_reward(self, epoch):
+        if self.rl_alg.name == "PPO_ADV":
+            color = "red"
+        else:
+            color = "blue"
+
+        self.epoch_vec.append(epoch)
+        self.reward_vec.append(self.buffer.rewards.mean())
+        plt.figure('Reward Plot')
+        plt.plot(self.epoch_vec, self.reward_vec, color)
+        plt.xlabel('epoch')
+        plt.ylabel('reward')
+        plt.pause(.000001)
+
+############################# ADVERSARIAL #####################################
+    def train_adv(self, adversary):
+        # Running for n epochs
+        for epoch in range(self.epochs):
+            print(f"Beginning Epoch {epoch+1}")
+            
+            # Reset the environment at beginning of each epoch
+            obs, _ = self.env.reset()
+            obs = torch.Tensor(obs)
+
+            # Rollout 
+            self.rollout_adv(obs, adversary)
+
+            # Update parameters
+            self.update()
+
+            # Update Tensorboard
+            self.writer.add_scalar("Reward", self.buffer.rewards.mean(), epoch)
+            self.writer.flush()
+
+            # anim.move(env.cost_map, env.position)
+
+            self.plot_reward(epoch)
+
+            # if self.live_sim == True:
+            #     plt.figure('Environment')
+            #     plt.imshow(frames[-1])
+            #     plt.axis('off')
+            #     plt.pause(.000001)
+
+    def rollout_adv(self, obs, adversary):
+        # Rollout for t timesteps
+        for t in range(self.t_steps):
+
+            with torch.no_grad() if ((self.rl_alg.name == 'PPO') | (self.rl_alg.name == 'PPO_ADV')) else torch.enable_grad():
+                logits = self.rl_alg.policy(obs)
+
+            probs = categorical.Categorical(logits=logits)
+            actions = probs.sample()
+            log_probs = probs.log_prob(actions)
+
+            with torch.no_grad() if ((adversary.name == 'PPO') | (adversary.name == 'PPO_ADV')) else torch.enable_grad():
+                logits_adv = adversary.policy(obs)
+
+            probs_adv = categorical.Categorical(logits=logits_adv)
+            actions_adv = probs_adv.sample()
+
+            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())
+            obs_new, reward, done, truncated, infos = self.env.step(actions_adv.numpy())
+            done = done | truncated # Change done if the episode is truncated
+
+            self.buffer.store(t, obs, actions, reward, log_probs, done)
+
+            obs = torch.Tensor(obs_new)
+
+            # For visualization
+            # frames.append(env.render()[0])

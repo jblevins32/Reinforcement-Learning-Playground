@@ -23,10 +23,10 @@ class Buffer:
     def store(self, t, s, a, r, lp, d):
         self.states[t] = s
         self.actions[t] = a
-        self.rewards[t] = torch.Tensor(r)
+        self.rewards[t] = torch.Tensor([r]) # take away [] if using vectored env
 
         self.log_probs[t] = lp
-        self.not_dones[t] = 1 - torch.Tensor(d)
+        self.not_dones[t] = 1 - torch.Tensor([d]) # take away [] if using vectored env
 
     def calc_returns(self, gamma = .99):
         self.returns = deepcopy(self.rewards)

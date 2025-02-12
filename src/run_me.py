@@ -7,6 +7,7 @@ import yaml
 import mujoco
 from mujoco import viewer
 import gymnasium as gym
+from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 
 # 2D Simulation imports
 from my_simulation.sim import *
@@ -59,11 +60,23 @@ elif config['env'] == "2dsim":
 
 # Gym
 elif config['env'] == "gym":
-    env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
-    
-    # Define the observation space and action space sizes
-    n_actions = int(env.action_space.nvec[0])
-    n_obs = env._observations[0].shape[0]
+
+    # Only use one env for recording
+    if config['record']:
+        env = gym.make(config['gym_model'], render_mode="rgb_array")
+        n_actions = int(env.action_space.n)
+        n_obs = env.observation_space.shape[0]
+
+        # Recording video parameters
+        num_training_episodes = config['epochs']  # total number of training episodes
+        env = RecordVideo(env, video_folder=f"videos/{config['gym_model']}/{config['rl_alg']}", name_prefix="training",
+                            episode_trigger=lambda x: x % config['record_period'] == 0)
+        env = RecordEpisodeStatistics(env)
+
+    else:
+        env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
+        n_actions = int(env.action_space.nvec[0])
+        n_obs = env._observations[0].shape[0]
 
     # Add new variables to args
     args = args[:5] + (env,n_obs,n_actions) + args[5:]
@@ -71,6 +84,8 @@ elif config['env'] == "gym":
     # Start Training
     agent = Agent(*args)
     agent.train()
+
+    env.close()
 
 elif config['env'] == "gym_adv":
     env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
