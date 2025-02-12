@@ -86,7 +86,8 @@ elif config['env'] == "gym":
     agent.train()
 
     # Save the model
-    model_dir = os.path.join(root_dir,"models",f"{config['gym_model']}_{config['rl_alg']}.pth")
+    final_reward = round(float(agent.buffer.rewards.mean()),5)
+    model_dir = os.path.join(root_dir,"models",f"{config['gym_model']}_{config['rl_alg']}_{final_reward}.pth")
     os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
     torch.save(agent.rl_alg.state_dict(),model_dir)
 

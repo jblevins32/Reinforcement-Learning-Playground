@@ -1,5 +1,5 @@
 # Simulation parameters
-num_environments: 1
+num_environments: 64
 live_sim: False
 env: "gym" # mujoco or 2dsim or gym
 operation: "train" # train or test
@@ -18,7 +18,7 @@ record_period: 50 # How many epochs to save the video
 discount: 0.99
 epsilon: 0.2
 t_steps: 256
-epochs: 10
+epochs: 2001
 lr: .001
 rl_alg: "PPO_CONT"
 

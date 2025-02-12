@@ -10,6 +10,7 @@ import webbrowser
 from globals import root_dir
 import os
 import subprocess
+import time
 from torch.distributions import Normal
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
@@ -54,12 +55,12 @@ class Agent():
         log_dir=os.path.join(root_dir,"tensorboard",self.rl_alg.name)
 
         # Start the tensorboard
-        tensorboard_cmd = f"tensorboard --logdir={log_dir} --port=6006 --bind_all"
+        tensorboard_cmd = f"tensorboard --logdir={log_dir} --port=6007 --bind_all"
         subprocess.Popen(tensorboard_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         # Create the writer
         self.writer = SummaryWriter(log_dir=log_dir, comment=f"_{self.rl_alg.name}")
-        webbrowser.open("http://localhost:6006")
+        webbrowser.open("http://localhost:6007")
 
         # Choose optimizer
         self.optimizer = Adam(params=self.rl_alg.parameters(), lr=lr)
@@ -68,10 +69,14 @@ class Agent():
         self.buffer = Buffer(n_steps=self.t_steps, n_envs=num_environments, n_obs=n_obs, n_actions=n_actions)
     
     def train(self):
+        
+        time_start_train = time.time()
+
         # Running for n epochs
         for epoch in range(self.epochs):
-            print(f"Beginning Epoch {epoch+1}")
             
+            time_start_epoch = time.time()
+
             # Reset the environment at beginning of each epoch
             obs, _ = self.env.reset()
             obs = torch.Tensor(obs)
@@ -82,13 +87,15 @@ class Agent():
             # Update parameters
             self.update()
 
-            # Update Tensorboard
+            # Update tensorboard and terminal
             self.writer.add_scalar("Reward", self.buffer.rewards.mean(), epoch)
             self.writer.flush()
+
+            print(f"Completed epoch {epoch}: Time {(time.time()-time_start_train)/60} min, Epoch runtime {time.time()-time_start_epoch} sec, Reward: {self.buffer.rewards.mean()}")
             
             # anim.move(env.cost_map, env.position)
 
-            self.plot_reward(epoch)
+            # self.plot_reward(epoch)
 
             # if self.live_sim == True:
             #     plt.figure('Environment')
