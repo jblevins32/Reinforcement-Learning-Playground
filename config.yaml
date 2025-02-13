@@ -13,13 +13,15 @@ gym_model: "Humanoid-v5" # "Pusher-v5" "HalfCheetah-v5" "MountainCar-v0" "CartPo
 # Recording parameters
 record: False
 record_period: 50 # How many epochs to save the video
+save_every: 1000
+
 
 # DL training parameters
 discount: 0.99
 epsilon: 0.2
 t_steps: 256
-epochs: 2001
-lr: .001
+epochs: 7001
+lr: .0005
 rl_alg: "PPO_CONT"
 
 # Adversarial parameters

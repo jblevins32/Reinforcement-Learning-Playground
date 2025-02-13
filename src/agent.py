@@ -25,7 +25,7 @@ from RL_algorithms.ppo_cont import *
 
 # Load and run the agent
 class Agent():
-    def __init__(self, rl_alg,operation,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, live_sim):
+    def __init__(self, rl_alg,operation,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, live_sim, save_every, gym_model):
 
         # Initialize plot variables
         self.epoch_vec = []
@@ -38,6 +38,8 @@ class Agent():
         self.discount = discount
         self.live_sim = live_sim
         self.t_steps = t_steps
+        self.save_every = save_every
+        self.gym_model = gym_model
 
         # Choose RL algorithm
         if rl_alg == "PPO":
@@ -93,6 +95,13 @@ class Agent():
 
             print(f"Completed epoch {epoch}: Time {(time.time()-time_start_train)/60} min, Epoch runtime {time.time()-time_start_epoch} sec, Reward: {self.buffer.rewards.mean()}")
             
+            # Save the model iteratively
+            if epoch % self.save_every == 0:
+                final_reward = round(float(self.buffer.rewards.mean()),5)
+                model_dir = os.path.join(root_dir,"models",f"{self.gym_model}_{self.rl_alg.name}_{final_reward}.pth")
+                os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
+                torch.save(self.rl_alg.state_dict(),model_dir)
+
             # anim.move(env.cost_map, env.position)
 
             # self.plot_reward(epoch)

@@ -18,7 +18,7 @@ from my_simulation.animation import *
 config = GetParams()
 
 # Arguments to all sim environments
-args = (config['rl_alg'],config['operation'],config['num_environments'],config['epochs'],config['t_steps'],config['discount'],config['epsilon'],config['lr'],config['live_sim'])
+args = (config['rl_alg'],config['operation'],config['num_environments'],config['epochs'],config['t_steps'],config['discount'],config['epsilon'],config['lr'],config['live_sim'],config['save_every'],config['gym_model'])
 
 ############################# Load the chosen environment and start training or inference #############################
 # MuJoCo
@@ -84,12 +84,6 @@ elif config['env'] == "gym":
     # Start Training
     agent = Agent(*args)
     agent.train()
-
-    # Save the model
-    final_reward = round(float(agent.buffer.rewards.mean()),5)
-    model_dir = os.path.join(root_dir,"models",f"{config['gym_model']}_{config['rl_alg']}_{final_reward}.pth")
-    os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
-    torch.save(agent.rl_alg.state_dict(),model_dir)
 
     env.close()
 
