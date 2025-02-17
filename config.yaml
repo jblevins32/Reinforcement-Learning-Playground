@@ -1,7 +1,7 @@
 # Simulation parameters
 num_environments: 64
 live_sim: False
-env: "gym" # mujoco or 2dsim or gym
+env: "2dsim" # mujoco or 2dsim or gym
 operation: "train" # train or test
 
 # If using Mujoco

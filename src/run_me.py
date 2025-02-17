@@ -11,8 +11,7 @@ from globals import root_dir
 from get_params import GetParams
 
 # 2D Simulation imports
-from my_simulation.sim import *
-from my_simulation.animation import *
+from my_sim.simulation import *
 
 ############################# Import args from config.yaml #############################
 config = GetParams()
@@ -28,34 +27,65 @@ if config['env'] == "mujoco":
 
 # Personal Simulation
 elif config['env'] == "2dsim":
+
+    env_config = {
+        "num_agents": 3,
+        "map_size": (50, 50),
+        "num_obstacles": 5,
+        "obstacle_cost": 5.0,
+        "mountainous": True,
+        "mountainous_scale": 1.0,
+        "robot_dynamics": "single_integrator",  # "unicycle" or "double_integrator"
+        "max_episode_steps": 200,
+        "communication_range": 10.0,
+        "observation_range": 10.0,
+        "centralized": False,
+        "save_video": True,
+        "video_filename": "multi_robot_demo.mp4",
+        "render_mode": "human"
+    }
+
+    env = MultiRobot2DEnv(**env_config)
+    obs, _ = env.reset()
+    
+    done = False
+    while not done:
+        # random actions
+        action = np.random.uniform(-1, 1, env.action_space.shape[0])
+        obs, reward, done, truncated, info = env.step(action)
+        # optionally print debug info
+        # print("Step reward:", reward)
+
+    env.close()
+
     # Generate costmap and make obstacles
-    env = Sim(grid_size=100)
-    env.set_start(10, 10)
-    env.set_goal(90, 90)
-    env.make_obstacles(num_obstacles=75,cost_map=env.cost_map, obstacle_size=7,build_wall=False)
+    # env = Sim(grid_size=100)
+    # env.set_start(10, 10)
+    # env.set_goal(90, 90)
+    # env.make_obstacles(num_obstacles=75,cost_map=env.cost_map, obstacle_size=7,build_wall=False)
 
-    n_obs = 2
-    n_actions = 1 # This needs to change for continuous
-    args = args[:5] + (env,n_obs,n_actions) + args[5:]
+    # n_obs = 2
+    # n_actions = 1 # This needs to change for continuous
+    # args = args[:5] + (env,n_obs,n_actions) + args[5:]
 
-    # Initialize and show the animation
-    anim = animate(env.cost_map, env.start, env.goal) 
+    # # Initialize and show the animation
+    # anim = animate(env.cost_map, env.start, env.goal) 
 
-    # Start Training
-    processes = [multiprocessing.Process(target=Agent,args=args) for _ in range(config['num_environments'])]
+    # # Start Training
+    # processes = [multiprocessing.Process(target=Agent,args=args) for _ in range(config['num_environments'])]
 
-    # For tracking sim times
-    time_tracker = {}
+    # # For tracking sim times
+    # time_tracker = {}
 
-    # Start all parallel processes
-    for idx, process in enumerate(processes):
-        time_tracker[idx] = time.time()
-        process.start()
+    # # Start all parallel processes
+    # for idx, process in enumerate(processes):
+    #     time_tracker[idx] = time.time()
+    #     process.start()
 
-    # Wait for all parallel processes to finish
-    for idx, process in enumerate(processes):
-        process.join()
-        print(f"Environment {idx+1} took {time.time()-time_tracker[idx]} seconds.")
+    # # Wait for all parallel processes to finish
+    # for idx, process in enumerate(processes):
+    #     process.join()
+    #     print(f"Environment {idx+1} took {time.time()-time_tracker[idx]} seconds.")
 
 # Gym
 elif config['env'] == "gym":
