@@ -2,7 +2,9 @@ name: RL
 channels:
   - pytorch
   - conda-forge
+  - defaults
 dependencies:
-  - pytorch
-  - torchvision
-  - mujoco
+  - python=3.9
+  - pytorch=2.0.1
+  - torchvision=0.15.2
+  - gymnasium

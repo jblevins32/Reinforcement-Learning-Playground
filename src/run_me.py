@@ -1,17 +1,12 @@
 from agent import Agent
-import multiprocessing
-import time
 import os
-import yaml
-import mujoco
-from mujoco import viewer
 import gymnasium as gym
 from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 from globals import root_dir
 from get_params import GetParams
 
 # 2D Simulation imports
-from my_sim.simulation import *
+from my_sim.gym_simulation import *
 
 ############################# Import args from config.yaml #############################
 config = GetParams()
@@ -20,72 +15,26 @@ config = GetParams()
 args = (config['rl_alg'],config['operation'],config['num_environments'],config['epochs'],config['t_steps'],config['discount'],config['epsilon'],config['lr'],config['live_sim'],config['save_every'],config['gym_model'])
 
 ############################# Load the chosen environment and start training or inference #############################
-# MuJoCo
-if config['env'] == "mujoco":
-    model = mujoco.MjModel.from_xml_path(config['muj_model_dir'])
-    data = mujoco.MjData(model)
 
-# Personal Simulation
-elif config['env'] == "2dsim":
+# Personal Simulation... this is just testing a P controller right now.
+if config['env'] == "2dsim":
 
-    env_config = {
-        "num_agents": 3,
-        "map_size": (50, 50),
-        "num_obstacles": 5,
-        "obstacle_cost": 5.0,
-        "mountainous": True,
-        "mountainous_scale": 1.0,
-        "robot_dynamics": "single_integrator",  # "unicycle" or "double_integrator"
-        "max_episode_steps": 200,
-        "communication_range": 10.0,
-        "observation_range": 10.0,
-        "centralized": False,
-        "save_video": True,
-        "video_filename": "multi_robot_demo.mp4",
-        "render_mode": "human"
-    }
+    # Create and check the environment if changes are made
+    env = gym.make('MRPP_Env', **config)
+    # check_env(env.unwrapped)
 
-    env = MultiRobot2DEnv(**env_config)
+    # Reset the env
     obs, _ = env.reset()
     
     done = False
     while not done:
         # random actions
-        action = np.random.uniform(-1, 1, env.action_space.shape[0])
+        # action = np.random.uniform(-1, 1, (config['num_agents'],2))
+        action = obs[:,2:] - obs[:,0:2]
         obs, reward, done, truncated, info = env.step(action)
-        # optionally print debug info
-        # print("Step reward:", reward)
+        env.render()
 
     env.close()
-
-    # Generate costmap and make obstacles
-    # env = Sim(grid_size=100)
-    # env.set_start(10, 10)
-    # env.set_goal(90, 90)
-    # env.make_obstacles(num_obstacles=75,cost_map=env.cost_map, obstacle_size=7,build_wall=False)
-
-    # n_obs = 2
-    # n_actions = 1 # This needs to change for continuous
-    # args = args[:5] + (env,n_obs,n_actions) + args[5:]
-
-    # # Initialize and show the animation
-    # anim = animate(env.cost_map, env.start, env.goal) 
-
-    # # Start Training
-    # processes = [multiprocessing.Process(target=Agent,args=args) for _ in range(config['num_environments'])]
-
-    # # For tracking sim times
-    # time_tracker = {}
-
-    # # Start all parallel processes
-    # for idx, process in enumerate(processes):
-    #     time_tracker[idx] = time.time()
-    #     process.start()
-
-    # # Wait for all parallel processes to finish
-    # for idx, process in enumerate(processes):
-    #     process.join()
-    #     print(f"Environment {idx+1} took {time.time()-time_tracker[idx]} seconds.")
 
 # Gym
 elif config['env'] == "gym":

@@ -1,17 +1,24 @@
 # Reinforcement Learning Playground
-This repo holds my Reinforcement Learning algorithms which can be run in various environments
+This repo holds my Reinforcement Learning algorithms which is run in gym environments
 
 ## File Structure
-- `config.yaml`: parameters to adjust for training and inference
-- `run_me.py`: primary file to run. 
-    - grabs parameters from config
-    - instantiates multiprocesses for multithreading
-    - calls the agent
-- `agent.py`: sets up environment and starts training or testing
-    - chooses environment/simulator. Current options are the custom 2D env or MuJoCo
-    - chooses RL algorithm to run
-    - runs training or testing with/without live simulation
-- `train.py`: main training script, agnostic to environment and rl algorithm 
-    - updates the environment and agent according to the chosen RL algorithm until training is done
-- `test.py`: main inference script, agnostic to environment and rl algorithm 
-    - updates the environment and agent according to the chosen RL algorithm until a goal is reached
+- `data`: Git ignored folder for storing reward data
+- `models`: Git ignored folder for storing trained models
+- `src`: Source code
+    - `incomplete_RL`: Incomplete RL algorithms
+    - `my_sim`: My custom Gym environment for Multi Robot Path Planning
+    - `RL_algorithms`: Completed RL algorithms
+    - `agent.py`: Main RL agent code
+    - `buffer.py`: Buffer class for storing data from rollouts
+    - `get_params.py`: Loads data from `config.yaml`
+    - `globals.py`: Creates global directory
+    - `run_me.py`: RUN THIS FOR TRAINING
+    - `test.py`: RUN THIS FOR TESTING
+- `tensorboard`: Git ignored folder for storing tensorboard data
+- `videos`: Git ignored folder for storing test videos
+- `changes.md`: Future work
+- `config.yaml`: Parameters to adjust for training and inference
+- `environment.yaml`: Environment Setup
+- `README.md`: This is literally you right now...
+- `RL_REQS.md`: RL job listings to drool over
+

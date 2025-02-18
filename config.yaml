@@ -1,4 +1,23 @@
-# Simulation parameters
+# Note: must use 'import gymnasium as gym' in all files, not 'import gym'
+
+# My simulation parameters
+num_agents: 3
+map_size: [100,50]
+num_obstacles: 10
+obstacle_radius_max: 15
+obstacle_cost: 5.0
+dynamics: "single_integrator"  # "unicycle" or "double_integrator"
+max_episode_steps: 200
+communication_range: 10.0
+observation_range: 10.0
+centralized: False
+dt: 0.1
+w_dist: 1
+w_coll: 1
+w_dir: 1
+w_goal: 1
+done_threshold: 5
+
 num_environments: 64
 live_sim: False
 env: "2dsim" # mujoco or 2dsim or gym
@@ -14,7 +33,6 @@ gym_model: "Humanoid-v5" # "Pusher-v5" "HalfCheetah-v5" "MountainCar-v0" "CartPo
 record: False
 record_period: 50 # How many epochs to save the video
 save_every: 1000
-
 
 # DL training parameters
 discount: 0.99
