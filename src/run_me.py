@@ -41,9 +41,9 @@ elif config['env'] == "gym":
 
     # Only use one env for recording
     if config['record']:
-        env = gym.make(config['gym_model'], render_mode="rgb_array")
-        n_actions = env.action_space.shape[0] #int(env.action_space.n)
-        n_obs = env.observation_space.shape[0]
+        env = gym.make(config['gym_model'], render_mode="rgb_array", **config)
+        n_actions = env.action_space.shape[0]*env.action_space.shape[1] #int(env.action_space.n)
+        n_obs = env.observation_space.shape[0]*env.observation_space.shape[1]
 
         # Recording video parameters
         num_training_episodes = config['epochs']  # total number of training episodes

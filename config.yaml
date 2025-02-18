@@ -7,7 +7,7 @@ num_obstacles: 10
 obstacle_radius_max: 15
 obstacle_cost: 5.0
 dynamics: "single_integrator"  # "unicycle" or "double_integrator"
-max_episode_steps: 200
+max_episode_steps: 256
 communication_range: 10.0
 observation_range: 10.0
 centralized: False
@@ -17,28 +17,29 @@ w_coll: 1
 w_dir: 1
 w_goal: 1
 done_threshold: 5
+seed_value: 42
 
-num_environments: 64
+num_environments: 1
 live_sim: False
-env: "2dsim" # mujoco or 2dsim or gym
+env: "gym" # mujoco or 2dsim or gym
 operation: "train" # train or test
 
 # If using Mujoco
 muj_model_dir: "/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml" # Change to the agent you want to train
 
 # If using gym (num_envs must be 1 right now)
-gym_model: "Humanoid-v5" # "Pusher-v5" "HalfCheetah-v5" "MountainCar-v0" "CartPole-v1" "Ant-v5"
+gym_model: "MRPP_Env" # Humanoid-v5 "Pusher-v5" "HalfCheetah-v5" "MountainCar-v0" "CartPole-v1" "Ant-v5" "MRPP_Env"
 
 # Recording parameters
-record: False
-record_period: 50 # How many epochs to save the video
-save_every: 1000
+record: True
+record_period: 500 # How many epochs to save the video
+save_every: 1000 # How many epochs to save the model
 
 # DL training parameters
 discount: 0.99
 epsilon: 0.2
 t_steps: 256
-epochs: 7001
+epochs: 1001
 lr: .0005
 rl_alg: "PPO_CONT"
 

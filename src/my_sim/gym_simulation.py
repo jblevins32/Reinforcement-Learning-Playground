@@ -12,7 +12,7 @@ register(id='MRPP_Env',
 class MRPP_Env(gym.Env):
 
     # Render the environment
-    metadata = {"render_modes": ["human"], "render_fps": 10}
+    metadata = {"render_modes": ["human","rgb_array"], "render_fps": 10}
 
     def __init__(self,**kwargs):
         
@@ -32,6 +32,9 @@ class MRPP_Env(gym.Env):
         self.w_coll = kwargs.get('w_coll',1)
         self.w_dir = kwargs.get('w_dir',1)
         self.w_goal = kwargs.get('w_goal',1)
+        self.seed_value = kwargs.get("seed_value", None)
+
+        self.render_mode = "rgb_array"
 
         # Action space: x and y velocities for each agent
         self.action_space = spaces.Box(low=-1,high=1, shape=(self.num_agents,2), dtype=float)
@@ -40,13 +43,18 @@ class MRPP_Env(gym.Env):
         self.observation_space = spaces.Box(low=0,high=np.max(self.map_size), shape=(self.num_agents,4), dtype=float)
 
         # Create the map
-        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal)
+        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.seed_value)
+
+
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+        super().reset(seed=self.seed_value)
+
+        # Seed the overarching gym env
+        self.seed(self.seed_value)
 
         # Reset the env
-        self.map.reset(seed=seed)
+        self.map.reset(seed=self.seed_value)
 
         # Get initial observation
         obs = self.map.get_obs()
@@ -56,6 +64,11 @@ class MRPP_Env(gym.Env):
         info = {}
 
         return obs, info
+    
+    def seed(self, seed=None):
+        """ Seed the environment and sub-components """
+        self.np_random, _ = gym.utils.seeding.np_random(seed)
+        return [seed]
     
     def step(self, action):
 
@@ -71,13 +84,15 @@ class MRPP_Env(gym.Env):
         # If we want to cut it off after a certain amount of steps
         truncated = False
 
+        # self.render()
+
         return obs, reward, terminated, truncated, info
     
     def render(self):
         self.map.plot_env()
 
 class EnvMap():
-    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal):
+    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, seed):
         self.num_agents = num_agents
         self.map_width = map_size[0]
         self.map_height = map_size[1]
@@ -94,8 +109,6 @@ class EnvMap():
         self.w_dir = w_dir
         self.w_goal = w_goal
 
-        self.rng = np.random.default_rng() # Get a random seed number
-
         self.done = False
 
         # Store agent paths
@@ -106,8 +119,8 @@ class EnvMap():
         plt.ion()  # Enable interactive mode
 
     def reset(self, seed=None):
-        if seed is not None:
-            self.rng = np.random.default_rng(seed)
+        
+        self.seed(seed)
 
         # Reset paths for each agent
         self.agent_paths = [[] for _ in range(self.num_agents)]
@@ -115,26 +128,31 @@ class EnvMap():
         self.generate_locations()
         self.generate_obstacles()
 
+    def seed(self, seed=None):
+        """ Properly seed the environment for reproducibility """
+        self.np_random, _ = gym.utils.seeding.np_random(seed)
+        return [seed]
+
     def generate_locations(self):
         # Generate random starting positions for each agent in the map
         robot_index = np.linspace(1,self.num_agents,self.num_agents,dtype=int)
-        robot_positions_x = self.rng.random(self.num_agents) * self.map_width
-        robot_positions_y = self.rng.random(self.num_agents) * self.map_height
+        robot_positions_x = self.np_random.random(self.num_agents) * self.map_width
+        robot_positions_y = self.np_random.random(self.num_agents) * self.map_height
         self.robot_positions_start = np.concatenate((robot_index.reshape(-1,1),robot_positions_x.reshape(-1,1),robot_positions_y.reshape(-1,1)),1)
         self.robot_positions = self.robot_positions_start
 
         # Generate random target positions for each agent in the map
 
-        robot_targets_x = self.rng.random(self.num_agents) * self.map_width
-        robot_targets_y = self.rng.random(self.num_agents) * self.map_height
+        robot_targets_x = self.np_random.random(self.num_agents) * self.map_width
+        robot_targets_y = self.np_random.random(self.num_agents) * self.map_height
         self.robot_targets_start = np.concatenate((robot_index.reshape(-1,1),robot_targets_x.reshape(-1,1),robot_targets_y.reshape(-1,1)),1)
         self.robot_targets = self.robot_targets_start
 
     def generate_obstacles(self):
         
-        obstacle_positions_x = self.rng.random(self.num_obstacles) * self.map_width
-        obstacle_positions_y = self.rng.random(self.num_obstacles) * self.map_height
-        obstacle_radii = self.rng.random(self.num_obstacles) * self.obstacle_radius_max
+        obstacle_positions_x = self.np_random.random(self.num_obstacles) * self.map_width
+        obstacle_positions_y = self.np_random.random(self.num_obstacles) * self.map_height
+        obstacle_radii = self.np_random.random(self.num_obstacles) * self.obstacle_radius_max
         self.obstacle_positions = np.concatenate((obstacle_positions_x.reshape(-1,1),obstacle_positions_y.reshape(-1,1),obstacle_radii.reshape(-1,1)),1)
         
     def check_obstacle_collisions(self):

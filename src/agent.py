@@ -154,7 +154,7 @@ class Agent():
 
             # Step 1: forward pass on the actor and critic to get action and value
             with torch.no_grad() if self.rl_alg.name == 'PPO_CONT' else torch.enable_grad():
-                mean = self.rl_alg.policy(obs)
+                mean = self.rl_alg.policy(obs.flatten())
                 std = torch.exp(self.rl_alg.log_std)
 
             # Step 2: create a distribution from the logits (raw outputs) and sample from it
@@ -163,11 +163,11 @@ class Agent():
             log_probs = dist.log_prob(actions).sum(dim=-1)
 
             # Step 3: take the action in the environment, using the action as a control command to the robot model. 
-            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())
+            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy().reshape(obs.shape[0],int(actions.shape[0]/obs.shape[0])))
             done = done | truncated # Change done if the episode is truncated
 
             # Step 4: store data in buffer
-            self.buffer.store(t, obs, actions, reward, log_probs, done)
+            self.buffer.store(t, obs.flatten(), actions, reward, log_probs, done)
             obs = torch.Tensor(obs_new)
 
 
