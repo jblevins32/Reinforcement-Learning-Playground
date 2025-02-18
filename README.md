@@ -1,5 +1,5 @@
 # Reinforcement Learning Playground
-This repo holds my Reinforcement Learning algorithms which is run in gym environments
+This repo holds my Reinforcement Learning algorithms which are run in gym environments
 
 ## File Structure
 - `data`: Git ignored folder for storing reward data
