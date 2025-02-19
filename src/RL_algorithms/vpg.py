@@ -7,7 +7,8 @@ class VPG(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(VPG, self).__init__()
         
-        self.name = "REINFORCE"
+        self.need_grad = True
+        self.name = "VPG"
 
         self.policy = nn.Sequential(
             nn.Linear(input_dim, 64),

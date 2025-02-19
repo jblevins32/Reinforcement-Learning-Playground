@@ -11,6 +11,7 @@ class PPO(nn.Module):
     def __init__(self, input_dim, output_dim, epsilon):
         super(PPO, self).__init__()
         
+        self.need_grad = False
         self.epsilon = epsilon
         self.name = "PPO"
 

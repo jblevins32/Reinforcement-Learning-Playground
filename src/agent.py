@@ -1,7 +1,3 @@
-# Mujoco imports
-import mujoco
-from mujoco import viewer
-import gymnasium as gym
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 from buffer import *
@@ -12,34 +8,35 @@ import os
 import subprocess
 import time
 from torch.distributions import Normal
+from torch.distributions import Categorical
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo import *
 from RL_algorithms.ppo_adv import *
 from RL_algorithms.ppo_cont import *
 
-
-
-
 ############################################################################################################
 
 # Load and run the agent
 class Agent():
-    def __init__(self, rl_alg,operation,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, live_sim, save_every, gym_model):
+    def __init__(self, rl_alg,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space):
 
         # Initialize plot variables
         self.epoch_vec = []
         self.reward_vec = []
         self.frames = []
 
-        self.operation = operation
         self.epochs = epochs
         self.env = env
         self.discount = discount
-        self.live_sim = live_sim
         self.t_steps = t_steps
         self.save_every = save_every
         self.gym_model = gym_model
+        self.num_environments = num_environments
+        self.n_obs = n_obs
+        self.n_actions = n_actions
+        self.num_agents = num_agents
+        self.space = space
 
         # Choose RL algorithm
         if rl_alg == "PPO":
@@ -68,7 +65,7 @@ class Agent():
         self.optimizer = Adam(params=self.rl_alg.parameters(), lr=lr)
 
         # Create buffer
-        self.buffer = Buffer(n_steps=self.t_steps, n_envs=num_environments, n_obs=n_obs, n_actions=n_actions)
+        self.buffer = Buffer(n_steps=self.t_steps, n_envs=num_environments, n_obs=n_obs, n_actions=n_actions, space=space)
     
     def train(self):
         
@@ -84,7 +81,10 @@ class Agent():
             obs = torch.Tensor(obs)
 
             # Rollout 
-            self.rollout_cont(obs)
+            if self.space == "cont":
+                self.rollout_cont(obs)
+            elif self.space == "disc":
+                self.rollout_disc(obs)
 
             # Update parameters
             self.update()
@@ -102,16 +102,6 @@ class Agent():
                 os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
                 torch.save(self.rl_alg.state_dict(),model_dir)
 
-            # anim.move(env.cost_map, env.position)
-
-            # self.plot_reward(epoch)
-
-            # if self.live_sim == True:
-            #     plt.figure('Environment')
-            #     plt.imshow(frames[-1])
-            #     plt.axis('off')
-            #     plt.pause(.000001)
-
     def update(self):
         # Get total expected return from the rollout in this epoch
         self.buffer.calc_returns()
@@ -127,16 +117,16 @@ class Agent():
 
         self.buffer.detach()
 
-    def rollout(self, obs):
+    def rollout_disc(self, obs):
         # Rollout for t timesteps
         for t in range(self.t_steps):
 
             # Step 1: forward pass on the actor and critic to get action and value
-            with torch.no_grad() if self.rl_alg.name == 'PPO' else torch.enable_grad():
+            with torch.no_grad() if self.rl_alg.need_grad == False else torch.enable_grad():
                 logits = self.rl_alg.policy(obs)
 
             # Step 2: create a distribution from the logits (raw outputs) and sample from it
-            probs = categorical.Categorical(logits=logits)
+            probs = Categorical(logits=logits)
             actions = probs.sample()
             log_probs = probs.log_prob(actions)
 
@@ -153,8 +143,8 @@ class Agent():
         for t in range(self.t_steps):
 
             # Step 1: forward pass on the actor and critic to get action and value
-            with torch.no_grad() if self.rl_alg.name == 'PPO_CONT' else torch.enable_grad():
-                mean = self.rl_alg.policy(obs.flatten())
+            with torch.no_grad() if self.rl_alg.need_grad == False else torch.enable_grad():
+                mean = self.rl_alg.policy(obs.reshape(self.num_environments,self.n_obs))
                 std = torch.exp(self.rl_alg.log_std)
 
             # Step 2: create a distribution from the logits (raw outputs) and sample from it
@@ -163,33 +153,12 @@ class Agent():
             log_probs = dist.log_prob(actions).sum(dim=-1)
 
             # Step 3: take the action in the environment, using the action as a control command to the robot model. 
-            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy().reshape(obs.shape[0],int(actions.shape[0]/obs.shape[0])))
+            obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())
             done = done | truncated # Change done if the episode is truncated
 
             # Step 4: store data in buffer
-            self.buffer.store(t, obs.flatten(), actions, reward, log_probs, done)
+            self.buffer.store(t, obs, actions, reward, log_probs, done)
             obs = torch.Tensor(obs_new)
-
-
-            # For visualization
-            # frames.append(env.render()[0])
-
-    # Train or test without the Mujoco simulation
-    # else:
-        # with viewer.launch_passive(model, data) as v:\
-            
-        #     # Running for t timesteps
-        #     for _ in range(t_steps):
-
-        #         # Train or Test the agent
-        #         if operation == "1":
-        #             Train(data)
-        #         else:
-        #             Test()
-
-        #         # Step Mujoco
-        #         mujoco.mj_step(model, data)
-                #   v.step()
 
     def plot_reward(self, epoch):
         if self.rl_alg.name == "PPO_ADV":
@@ -259,6 +228,3 @@ class Agent():
             self.buffer.store(t, obs, actions, reward, log_probs, done)
 
             obs = torch.Tensor(obs_new)
-
-            # For visualization
-            # frames.append(env.render()[0])

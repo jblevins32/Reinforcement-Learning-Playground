@@ -10,9 +10,10 @@ This repo holds my Reinforcement Learning algorithms which are run in gym enviro
     - `RL_algorithms`: Completed RL algorithms
     - `agent.py`: Main RL agent code
     - `buffer.py`: Buffer class for storing data from rollouts
+    - `create_env.py`: Calls for creation of the environment with specific indices for each env type
     - `get_params.py`: Loads data from `config.yaml`
     - `globals.py`: Creates global directory
-    - `run_me.py`: RUN THIS FOR TRAINING
+    - `train.py`: RUN THIS FOR TRAINING
     - `test.py`: RUN THIS FOR TESTING
 - `tensorboard`: Git ignored folder for storing tensorboard data
 - `videos`: Git ignored folder for storing test videos

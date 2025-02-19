@@ -1,9 +1,7 @@
 import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.envs.registration import register
-from gymnasium.utils.env_checker import check_env
 import numpy as np
-import random
 import matplotlib.pyplot as plt
 
 register(id='MRPP_Env',
@@ -12,9 +10,9 @@ register(id='MRPP_Env',
 class MRPP_Env(gym.Env):
 
     # Render the environment
-    metadata = {"render_modes": ["human","rgb_array"], "render_fps": 10}
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 60}
 
-    def __init__(self,**kwargs):
+    def __init__(self,render_mode,**kwargs):
         
         self.num_agents = kwargs.get('num_agents', 5)
         self.map_size = kwargs.get('map_size', (10, 10))
@@ -33,19 +31,20 @@ class MRPP_Env(gym.Env):
         self.w_dir = kwargs.get('w_dir',1)
         self.w_goal = kwargs.get('w_goal',1)
         self.seed_value = kwargs.get("seed_value", None)
+        self.num_environments = kwargs.get('num_environments',1)
+        self.n_actions = 2
+        self.n_obs = 4
 
-        self.render_mode = "rgb_array"
+        self.render_mode = render_mode
 
         # Action space: x and y velocities for each agent
-        self.action_space = spaces.Box(low=-1,high=1, shape=(self.num_agents,2), dtype=float)
+        self.action_space = spaces.Box(low=-1,high=1, shape=(self.num_agents,self.n_actions), dtype=float)
 
         # Create observation space: x and y position for each agent and same for each target
-        self.observation_space = spaces.Box(low=0,high=np.max(self.map_size), shape=(self.num_agents,4), dtype=float)
+        self.observation_space = spaces.Box(low=0,high=np.max(self.map_size), shape=(self.num_agents,self.n_obs), dtype=float)
 
         # Create the map
-        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.seed_value)
-
-
+        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.num_environments, self.n_actions)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=self.seed_value)
@@ -71,6 +70,8 @@ class MRPP_Env(gym.Env):
         return [seed]
     
     def step(self, action):
+        # Format the actions
+        action = action.reshape(self.num_agents,self.n_actions)
 
         # Take the action
         terminated = self.map.perform_action(action)
@@ -89,10 +90,10 @@ class MRPP_Env(gym.Env):
         return obs, reward, terminated, truncated, info
     
     def render(self):
-        self.map.plot_env()
+        return self.map.plot_env()
 
 class EnvMap():
-    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, seed):
+    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, num_environments, n_actions):
         self.num_agents = num_agents
         self.map_width = map_size[0]
         self.map_height = map_size[1]
@@ -100,6 +101,8 @@ class EnvMap():
         self.obstacle_radius_max = obstacle_radius_max
         self.obstacle_cost = obstacle_cost
         self.dt = dt
+        self.num_environments = num_environments
+        self.n_actions = n_actions
 
         self.done_threshold = done_threshold
 
@@ -167,6 +170,7 @@ class EnvMap():
         return np.concatenate((self.robot_positions[:, 1:], self.robot_targets[:, 1:]), axis=1)  # Shape: (num_agents, 4)
     
     def perform_action(self, actions):
+
         # Assume velocity commands
         self.robot_positions[:,1:] += actions*self.dt
 
@@ -203,7 +207,7 @@ class EnvMap():
         return reward
     
     def plot_env(self):
-        """ Updates the existing plot instead of opening a new window. """
+        # Return the rgb array for the video and also plot the env
         self.ax.clear()  # Clear previous plot
         self.ax.set_xlim(0, self.map_width)
         self.ax.set_ylim(0, self.map_height)
@@ -235,4 +239,10 @@ class EnvMap():
             circle = plt.Circle((obstacle[0], obstacle[1]), obstacle[2], color='grey', alpha=0.5)
             self.ax.add_patch(circle)
 
-        plt.pause(0.1)
+        # plt.pause(0.1)
+
+        # Save rgb array
+        self.fig.canvas.draw()
+        img_array = np.array(self.fig.canvas.renderer.buffer_rgba())
+
+        return img_array

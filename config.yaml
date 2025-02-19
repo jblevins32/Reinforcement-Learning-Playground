@@ -19,29 +19,31 @@ w_goal: 1
 done_threshold: 5
 seed_value: 42
 
-num_environments: 1
-live_sim: False
-env: "gym" # mujoco or 2dsim or gym
-operation: "train" # train or test
-
-# If using Mujoco
-muj_model_dir: "/home/jblevins32/.mujoco/mujoco210/model/humanoid.xml" # Change to the agent you want to train
-
-# If using gym (num_envs must be 1 right now)
-gym_model: "MRPP_Env" # Humanoid-v5 "Pusher-v5" "HalfCheetah-v5" "MountainCar-v0" "CartPole-v1" "Ant-v5" "MRPP_Env"
-
-# Recording parameters
-record: True
-record_period: 500 # How many epochs to save the video
-save_every: 1000 # How many epochs to save the model
-
-# DL training parameters
+# Training specific parameters
+num_environments: 64
+save_every: 100 # How many epochs to save the model
 discount: 0.99
 epsilon: 0.2
 t_steps: 256
 epochs: 1001
-lr: .0005
+lr: .001
 rl_alg: "PPO_CONT"
+
+# Testing specific parameters
+record_period: 1 # How many epochs to save the video
+test_model_reward: "-43.51058" # Final reward of saved model (to differentiate them)
+test_steps: 100
+
+# Other parameters
+space: "cont" # disc or cont depending on env
+gym_model: "MRPP_Env" 
+# Humanoid-v5 
+# Pusher-v5
+# HalfCheetah-v5 
+# MountainCar-v0 
+# CartPole-v1 
+# Ant-v5 
+# MRPP_Env
 
 # Adversarial parameters
 rl_alg_adv: "PPO_ADV"

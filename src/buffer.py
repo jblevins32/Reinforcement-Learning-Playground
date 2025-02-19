@@ -2,12 +2,15 @@ import torch
 from copy import deepcopy
 
 class Buffer:
-    def __init__(self, n_steps, n_envs, n_obs, n_actions):
+    def __init__(self, n_steps, n_envs, n_obs, n_actions, space):
         s, e, o, a = n_steps, n_envs, n_obs, n_actions
         from torch import zeros
 
         self.states = zeros((s, e, o))
-        self.actions = zeros((s, e, a))
+        if space == "cont":
+            self.actions = zeros((s, e, a))
+        elif space =="disc":
+            self.actions = zeros((s, e))
         self.rewards = zeros((s, e))
         self.not_dones = zeros((s, e))
 
@@ -21,6 +24,10 @@ class Buffer:
         self.log_probs = self.log_probs.detach()
 
     def store(self, t, s, a, r, lp, d):
+        # Reshape obs if using my own env
+        if len(s.shape) > 2:
+            s = s.reshape(*s.shape[:-2],-1)
+
         self.states[t] = s
         self.actions[t] = a
         self.rewards[t] = torch.Tensor([r]) # take away [] if using vectored env
