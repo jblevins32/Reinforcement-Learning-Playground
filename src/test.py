@@ -18,7 +18,7 @@ env,n_actions,n_obs = CreateEnv(operation="test")
 # Recording video parameters
 num_training_episodes = config['epochs']  # total number of training episodes
 video_dir = os.path.join(root_dir, "videos", config['gym_model'], config['rl_alg'])
-env = RecordVideo(env, video_folder=video_dir, name_prefix="testing",
+env = RecordVideo(env, video_folder=video_dir, name_prefix=f"testing_{config['test_model_reward']}_reward_{config['test_steps']}_steps",
                     episode_trigger=lambda x: x % config['record_period'] == 0)
 env = RecordEpisodeStatistics(env)
 
