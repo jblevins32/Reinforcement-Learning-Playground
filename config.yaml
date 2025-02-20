@@ -1,5 +1,9 @@
 # Note: must use 'import gymnasium as gym' in all files, not 'import gym'
 
+# Notes for training: 
+# Must use continous rl algorithm if using continuous env and vice versa
+
+
 # My simulation parameters
 num_agents: 3
 map_size: [100,50]
@@ -21,30 +25,30 @@ seed_value: 42
 
 # Training specific parameters
 num_environments: 64
+epochs: 100
+t_steps: 256 # Number of rollouts per epoch
 save_every: 100 # How many epochs to save the model
 discount: 0.99
 epsilon: 0.2
-t_steps: 256
-epochs: 1001
 lr: .001
 rl_alg: "PPO_CONT"
 
 # Testing specific parameters
 record_period: 1 # How many epochs to save the video
-test_model_reward: "-43.51058" # Final reward of saved model (to differentiate them)
-test_steps: 100
+test_model_reward: "0.11093" # Final reward of saved model (to differentiate them)
+test_steps: 1000
 
 # Other parameters
 space: "cont" # disc or cont depending on env
-gym_model: "MRPP_Env" 
+gym_model: "Ant-v5" 
 # Humanoid-v5 
 # Pusher-v5
 # HalfCheetah-v5 
 # MountainCar-v0 
 # CartPole-v1 
 # Ant-v5 
+# Swimmer-v5
 # MRPP_Env
 
 # Adversarial parameters
-rl_alg_adv: "PPO_ADV"
-adv_iter: 10
+adv_iter: 70

@@ -1,11 +1,8 @@
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 from buffer import *
-from torch.utils.tensorboard import SummaryWriter
-import webbrowser
 from globals import root_dir
 import os
-import subprocess
 import time
 from torch.distributions import Normal
 from torch.distributions import Categorical
@@ -19,7 +16,7 @@ from RL_algorithms.ppo_cont import *
 
 # Load and run the agent
 class Agent():
-    def __init__(self, rl_alg,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space):
+    def __init__(self, rl_alg,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space, writer):
 
         # Initialize plot variables
         self.epoch_vec = []
@@ -37,6 +34,7 @@ class Agent():
         self.n_actions = n_actions
         self.num_agents = num_agents
         self.space = space
+        self.writer = writer
 
         # Choose RL algorithm
         if rl_alg == "PPO":
@@ -49,17 +47,6 @@ class Agent():
             self.rl_alg = PPO_ADV(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
         elif rl_alg =="PPO_CONT":
             self.rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
-
-        # Tensor board setup
-        log_dir=os.path.join(root_dir,"tensorboard",self.rl_alg.name)
-
-        # Start the tensorboard
-        tensorboard_cmd = f"tensorboard --logdir={log_dir} --port=6007 --bind_all"
-        subprocess.Popen(tensorboard_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        # Create the writer
-        self.writer = SummaryWriter(log_dir=log_dir, comment=f"_{self.rl_alg.name}")
-        webbrowser.open("http://localhost:6007")
 
         # Choose optimizer
         self.optimizer = Adam(params=self.rl_alg.parameters(), lr=lr)
@@ -90,7 +77,7 @@ class Agent():
             self.update()
 
             # Update tensorboard and terminal
-            self.writer.add_scalar("Reward", self.buffer.rewards.mean(), epoch)
+            self.writer.add_scalars("", {self.rl_alg.name: self.buffer.rewards.mean()}, epoch)
             self.writer.flush()
 
             print(f"Completed epoch {epoch}: Total runtime {np.round((time.time()-time_start_train)/60,5)} min, Epoch runtime {np.round(time.time()-time_start_epoch,5)} sec, Reward: {np.round(self.buffer.rewards.mean(),5)}")
@@ -175,56 +162,74 @@ class Agent():
         plt.pause(.000001)
 
 ############################# ADVERSARIAL #####################################
-    def train_adv(self, adversary):
+    def train_adv(self, adversary, player):
+        
+        time_start_train = time.time()
+        self.total_reward = 0 # Track total reward for this training run
+
         # Running for n epochs
         for epoch in range(self.epochs):
-            print(f"Beginning Epoch {epoch+1}")
             
+            time_start_epoch = time.time()
+
             # Reset the environment at beginning of each epoch
             obs, _ = self.env.reset()
             obs = torch.Tensor(obs)
 
             # Rollout 
-            self.rollout_adv(obs, adversary)
+            if self.space == "cont":
+                self.rollout_cont_adv(obs, adversary, player)
+            elif self.space == "disc": # Not implemented for discrete
+                self.rollout_disc(obs)
 
             # Update parameters
             self.update()
 
-            # Update Tensorboard
-            self.writer.add_scalar("Reward", self.buffer.rewards.mean(), epoch)
-            self.writer.flush()
+            # Store reward for this epoch: for adervarial plotting
+            self.total_reward += self.buffer.rewards.mean()
 
-            # anim.move(env.cost_map, env.position)
+            print(f"Completed epoch {epoch}: Total runtime {np.round((time.time()-time_start_train)/60,5)} min, Epoch runtime {np.round(time.time()-time_start_epoch,5)} sec, Reward: {np.round(self.buffer.rewards.mean(),5)}")
+            
+            # Save the model iteratively
+            if (epoch % self.save_every == 0) and epoch != 0:
+                final_reward = round(float(self.buffer.rewards.mean()),5)
+                model_dir = os.path.join(root_dir,"models",f"{self.gym_model}_{self.rl_alg.name}_{final_reward}.pth")
+                os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
+                torch.save(self.rl_alg.state_dict(),model_dir)
 
-            self.plot_reward(epoch)
-
-            # if self.live_sim == True:
-            #     plt.figure('Environment')
-            #     plt.imshow(frames[-1])
-            #     plt.axis('off')
-            #     plt.pause(.000001)
-
-    def rollout_adv(self, obs, adversary):
+    def rollout_cont_adv(self, obs, adversary, player):
         # Rollout for t timesteps
         for t in range(self.t_steps):
+            
+            # DEFENDER Step 1: forward pass on the actor and critic to get action and value
+            with torch.no_grad() if self.rl_alg.need_grad == False else torch.enable_grad():
+                mean = self.rl_alg.policy(obs.reshape(self.num_environments,self.n_obs))
+                std = torch.exp(self.rl_alg.log_std)
 
-            with torch.no_grad() if ((self.rl_alg.name == 'PPO') | (self.rl_alg.name == 'PPO_ADV')) else torch.enable_grad():
-                logits = self.rl_alg.policy(obs)
+            # Step 2: create a distribution from the logits (raw outputs) and sample from it
+            dist = Normal(mean, std)
+            actions = dist.sample()
+            log_probs = dist.log_prob(actions).sum(dim=-1)
 
-            probs = categorical.Categorical(logits=logits)
-            actions = probs.sample()
-            log_probs = probs.log_prob(actions)
+            # ADVERSARY Step 1: forward pass on the actor and critic to get action and value
+            with torch.no_grad() if adversary.need_grad == False else torch.enable_grad():
+                mean_adv = adversary.policy(obs.reshape(self.num_environments,self.n_obs))
+                std_adv = torch.exp(adversary.log_std)
 
-            with torch.no_grad() if ((adversary.name == 'PPO') | (adversary.name == 'PPO_ADV')) else torch.enable_grad():
-                logits_adv = adversary.policy(obs)
+            # Step 2: create a distribution from the logits (raw outputs) and sample from it
+            dist_adv = Normal(mean_adv, std_adv)
+            actions_adv = dist_adv.sample()
+            log_probs_adv = dist_adv.log_prob(actions_adv).sum(dim=-1)
 
-            probs_adv = categorical.Categorical(logits=logits_adv)
-            actions_adv = probs_adv.sample()
-
+            # Step 3: take the action in the environment, using the action as a control command to the robot model. 
             obs_new, reward, done, truncated, infos = self.env.step(actions.numpy())
             obs_new, reward, done, truncated, infos = self.env.step(actions_adv.numpy())
             done = done | truncated # Change done if the episode is truncated
 
-            self.buffer.store(t, obs, actions, reward, log_probs, done)
+            # Make adversary have opposite reward
+            if player == "adversary":
+                reward = -reward
 
+            # Step 4: store data in buffer
+            self.buffer.store(t, obs, actions, reward, log_probs, done)
             obs = torch.Tensor(obs_new)

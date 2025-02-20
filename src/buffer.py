@@ -30,7 +30,7 @@ class Buffer:
 
         self.states[t] = s
         self.actions[t] = a
-        self.rewards[t] = torch.Tensor([r]) # take away [] if using vectored env
+        self.rewards[t] = torch.Tensor(r)
 
         self.log_probs[t] = lp
         self.not_dones[t] = 1 - torch.Tensor([d]) # take away [] if using vectored env
