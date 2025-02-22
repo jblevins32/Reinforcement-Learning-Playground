@@ -43,7 +43,8 @@ obs = env.reset()
 obs = obs[0]
 done = False
 count_steps = 0
-while (done is False) and (count_steps < config['test_steps']):
+while (count_steps < config['test_steps']):
+# while (done is False) and (count_steps < config['test_steps']):
     count_steps += 1
     with torch.no_grad():
         mean = rl_alg.policy(torch.Tensor(obs.flatten()))

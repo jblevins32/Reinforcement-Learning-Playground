@@ -25,9 +25,9 @@ seed_value: 42
 
 # Training specific parameters
 num_environments: 64
-epochs: 100
+epochs: 1500
 t_steps: 256 # Number of rollouts per epoch
-save_every: 5 # How many epochs to save the model (or adv_iters for adversarial training)
+save_every: 250 # How many epochs to save the model (or adv_iters for adversarial training)
 discount: 0.99
 epsilon: 0.2
 lr: .001
@@ -35,7 +35,7 @@ rl_alg: "PPO_CONT"
 
 # Testing specific parameters
 record_period: 1 # How many epochs to save the video
-test_model_reward: "0.11093" # Final reward of saved model (to differentiate them)
+test_model_reward: "0.69075" # Final reward of saved model (to differentiate them)
 test_steps: 1000
 
 # Other parameters
