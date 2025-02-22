@@ -27,7 +27,7 @@ seed_value: 42
 num_environments: 64
 epochs: 100
 t_steps: 256 # Number of rollouts per epoch
-save_every: 100 # How many epochs to save the model
+save_every: 5 # How many epochs to save the model (or adv_iters for adversarial training)
 discount: 0.99
 epsilon: 0.2
 lr: .001
@@ -51,4 +51,4 @@ gym_model: "Ant-v5"
 # MRPP_Env
 
 # Adversarial parameters
-adv_iter: 70
+adv_iter: 30

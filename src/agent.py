@@ -80,10 +80,10 @@ class Agent():
             self.writer.add_scalars("", {self.rl_alg.name: self.buffer.rewards.mean()}, epoch)
             self.writer.flush()
 
-            print(f"Completed epoch {epoch}: Total runtime {np.round((time.time()-time_start_train)/60,5)} min, Epoch runtime {np.round(time.time()-time_start_epoch,5)} sec, Reward: {np.round(self.buffer.rewards.mean(),5)}")
+            print(f"Completed epoch {epoch + 1}: Total runtime {np.round((time.time()-time_start_train)/60,5)} min, Epoch runtime {np.round(time.time()-time_start_epoch,5)} sec, Reward: {np.round(self.buffer.rewards.mean(),5)}")
             
             # Save the model iteratively
-            if (epoch % self.save_every == 0) and epoch != 0:
+            if ((epoch + 1) % self.save_every == 0) and epoch != 0:
                 final_reward = round(float(self.buffer.rewards.mean()),5)
                 model_dir = os.path.join(root_dir,"models",f"{self.gym_model}_{self.rl_alg.name}_{final_reward}.pth")
                 os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
@@ -188,14 +188,7 @@ class Agent():
             # Store reward for this epoch: for adervarial plotting
             self.total_reward += self.buffer.rewards.mean()
 
-            print(f"Completed epoch {epoch}: Total runtime {np.round((time.time()-time_start_train)/60,5)} min, Epoch runtime {np.round(time.time()-time_start_epoch,5)} sec, Reward: {np.round(self.buffer.rewards.mean(),5)}")
-            
-            # Save the model iteratively
-            if (epoch % self.save_every == 0) and epoch != 0:
-                final_reward = round(float(self.buffer.rewards.mean()),5)
-                model_dir = os.path.join(root_dir,"models",f"{self.gym_model}_{self.rl_alg.name}_{final_reward}.pth")
-                os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
-                torch.save(self.rl_alg.state_dict(),model_dir)
+            print(f"Completed epoch {epoch + 1}: Total runtime {np.round((time.time()-time_start_train)/60,5)} min, Epoch runtime {np.round(time.time()-time_start_epoch,5)} sec, Reward: {np.round(self.buffer.rewards.mean(),5)}")
 
     def rollout_cont_adv(self, obs, adversary, player):
         # Rollout for t timesteps
