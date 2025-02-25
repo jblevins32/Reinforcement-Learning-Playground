@@ -123,7 +123,7 @@ class EnvMap():
         self.obs_vec = []
 
         # Initialize Matplotlib figure
-        self.fig, (self.ax1, self.ax2) = plt.subplots(2,1,figsize=(self.map_width/10, self.map_height/10))
+        self.fig, (self.ax1, self.ax2) = plt.subplots(2,1,figsize=(self.map_width/10, self.map_height/5))
 
     def reset(self, seed=None):
         
@@ -132,8 +132,13 @@ class EnvMap():
         # Reset paths for each agent
         self.agent_paths = [[] for _ in range(self.num_agents)]
 
-        self.generate_locations()
         self.generate_obstacles()
+
+        # Reset the agents until starts and goals are not on obstacles
+        collisions = True
+        while collisions == True:
+            self.generate_locations()
+            collisions = self.check_collisions()
 
     def seed(self, seed=None):
         """ Properly seed the environment for reproducibility """
@@ -162,13 +167,69 @@ class EnvMap():
         obstacle_radii = self.np_random.random(self.num_obstacles) * self.obstacle_radius_max
         self.obstacle_positions = np.concatenate((obstacle_positions_x.reshape(-1,1),obstacle_positions_y.reshape(-1,1),obstacle_radii.reshape(-1,1)),1)
         
-    def check_obstacle_collisions(self):
+    def check_collisions(self):
 
+        dist_obstacles_radius_r_agent, _ = self.check_obstacle_distances(agent_or_target="agent")
+        dist_obstacles_radius_r_target, _ = self.check_obstacle_distances(agent_or_target="target")
+        dist_agents_radius_r, _ = self.check_agent_distances()
+        
+        collisions = np.sum(dist_obstacles_radius_r_agent < 0) + np.sum(dist_agents_radius_r < 0) + np.sum(dist_obstacles_radius_r_target < 0)
+
+        return int(collisions) != 0
+    
         # Distance formula broadcasting with robots and obstacles
         dist_mask = np.sqrt((self.obstacle_positions[:,0].reshape(-1,1) - self.robot_positions[:,1].reshape(1,-1))**2 + (self.obstacle_positions[:,1].reshape(-1,1) - self.robot_positions[:,2].reshape(1,-1))**2) < self.obstacle_positions[:,2].reshape(-1,1)
         collisions = np.sum(dist_mask)
 
         return collisions
+    
+    def check_obstacle_distances(self, agent_or_target):
+        obs = self.get_obs()
+
+        # Flexibility to check agents and targets for collisions
+        if agent_or_target == "agent":
+            obs = obs[np.newaxis,:,:-2]
+        else:
+            obs = obs[np.newaxis,:,2:]
+
+        obstacle_radii = self.obstacle_positions[:,-1]
+
+        # Get each agent's x and y center distances from each obstacle center: num_obstacles x num_agents x 2
+        dist_obstacles_centers_xy = obs - self.obstacle_positions[:,np.newaxis,0:-1]
+
+        # Get straight line distance from each agent center to obstacle center: num_obstacles x num_agents
+        dist_obstacles_centers_r = np.linalg.norm(dist_obstacles_centers_xy,axis=2)
+
+        # Get straight line distance from each agent border to obstacle border: num_obstacles x num_agents
+        dist_obstacles_radius_r = dist_obstacles_centers_r - np.expand_dims(obstacle_radii,axis=-1) - self.agent_radius
+
+        # Get directions of agents from each obstacle: num_obstacles x num_agents x 2
+        dist_obstacles_centers_r = np.expand_dims(dist_obstacles_centers_r, axis=-1)
+        dir_obstacles = dist_obstacles_centers_xy/dist_obstacles_centers_r
+
+        return dist_obstacles_radius_r, dir_obstacles
+
+    def check_agent_distances(self):
+        obs = self.get_obs()
+        diagonal_mask = np.arange(self.num_agents)
+        
+        # Get each agent's x and y center distances from each other's center: num_agents x num_agents x 2
+        dist_agents_centers_xy = obs[np.newaxis,:,:-2] - obs[:,np.newaxis,:-2]
+
+        # Get straight line distance from each agent center to obstacle center: num_agents x num_agents
+        dist_agents_centers_r = np.linalg.norm(dist_agents_centers_xy,axis=2)
+
+        # Get straight line distance from each agent border to obstacle border: num_agents x num_agents
+        dist_agents_radius_r = dist_agents_centers_r - self.agent_radius*2
+        dist_agents_radius_r[diagonal_mask, diagonal_mask] = 0
+
+        # Get directions of agents from each obstacle: num_agents x num_agents x 2
+        dist_agents_centers_r = np.expand_dims(dist_agents_centers_r, axis=-1)
+        dist_agents_centers_r[diagonal_mask, diagonal_mask] = 1
+
+        dir_agents = dist_agents_centers_xy/dist_agents_centers_r
+
+        return dist_agents_radius_r, dir_agents
 
     def get_obs(self):
         return np.concatenate((self.robot_positions[:, 1:], self.robot_targets[:, 1:]), axis=1)  # Shape: (num_agents, 4)
@@ -194,7 +255,7 @@ class EnvMap():
         dist_rmse = np.sqrt(np.mean((self.robot_targets[:,1:] - self.robot_positions[:,1:])**2))
 
         # Collisions. Want less.
-        num_collisions = self.check_obstacle_collisions()
+        num_collisions = self.check_collisions()
 
         # Direction of travel. Want more
         dir_accuracy = 0

@@ -21,13 +21,23 @@ def TestMySim():
 
     done = False
     while not done:
+
+        # get action
         action = Obstacle_avoid_control(obs, env)
-        action = action_attack(action)
-        obs_prev = obs.copy()
+
+        # test control attack
+        if config['test_attack']:
+            action = action_attack(action)
+            obs_prev = obs.copy()
+
+        # Take step
         obs, reward, done, truncated, info = env.step(action)
-        obs = obs_attack(obs, obs_prev)
-        env.env.env.env.map.robot_positions[:,1:] = obs[:,0:2]
-        print(obs)
+
+        # test obs attack
+        if config['test_attack']:
+            obs = obs_attack(obs, obs_prev)
+            env.env.env.env.map.robot_positions[:,1:] = obs[:,0:2]
+
         env.render()
 
     while done:
@@ -42,55 +52,29 @@ def P_control(obs):
 
 def Obstacle_avoid_control(obs, env):
     # Control = distance + agent collisions + obstacle collisions
-    map = env.env.env.env.map
-    num_agents = env.env.env.env.num_agents
-    agent_radius = env.env.env.env.agent_radius
-    obstacle_positions = map.obstacle_positions[:,np.newaxis,0:-1]
-    obstacle_radii = map.obstacle_positions[:,-1]
+    root = env.env.env.env
+    map = root.map
+    num_agents = root.num_agents
     robot_positions = obs
     env.render()
 
-    kp_collisions_agents = 50
-    kp_dist = 1
-    kp_collisions_obstacles = 10
+    kp_collisions_agents = 20
+    kp_dist = 2
+    kp_collisions_obstacles = 20
 
     # Distance control: correct for error of agents away from their goals
     distance_control = robot_positions[:,2:] - robot_positions[:,0:2]
 
     # Collision control: correct for agents being near or on obstacles
-
-    # Get each agent's x and y center distances from each obstacle center: num_obstacles x num_agents x 2
-    dist_obstacles_centers_xy = robot_positions[np.newaxis,:,:-2] - obstacle_positions
-
-    # Get straight line distance from each agent center to obstacle center: num_obstacles x num_agents
-    dist_obstacles_centers_r = np.linalg.norm(dist_obstacles_centers_xy,axis=2)
-
-    # Get straight line distance from each agent border to obstacle border: num_obstacles x num_agents
-    dist_obstacles_radius_r = dist_obstacles_centers_r - np.expand_dims(obstacle_radii,axis=-1) - agent_radius
-
-    # Get directions of agents from each obstacle: num_obstacles x num_agents x 2
-    dist_obstacles_centers_r = np.expand_dims(dist_obstacles_centers_r, axis=-1)
-    dir_obstacles = dist_obstacles_centers_xy/dist_obstacles_centers_r
-
+    dist_obstacles_radius_r, dir_obstacles = map.check_obstacle_distances("agent")
     inv_law = 1/(dist_obstacles_radius_r**2)
     collision_control_obstacles = np.sum(np.expand_dims(inv_law,axis=-1) * dir_obstacles,axis=0)
 
     # Collision control: correct for agents being near eachother
     if num_agents > 1:
-        # Get each agent's x and y center distances from each other's center: num_agents x num_agents x 2
-        dist_agents_centers_xy = robot_positions[np.newaxis,:,:-2] - robot_positions[:,np.newaxis,:-2]
+        dist_agents_radius_r, dir_agents = map.check_agent_distances()
 
-        # Get straight line distance from each agent center to obstacle center: num_agents x num_agents
-        dist_agents_centers_r = np.linalg.norm(dist_agents_centers_xy,axis=2)
-
-        # Get straight line distance from each agent border to obstacle border: num_agents x num_agents
-        dist_agents_radius_r = dist_agents_centers_r - agent_radius*2
-
-        # Get directions of agents from each obstacle: num_agents x num_agents x 2
-        dist_agents_centers_r = np.expand_dims(dist_agents_centers_r, axis=-1)
-        dir_agents = dist_agents_centers_xy/dist_agents_centers_r
-
-        # Set the diagonals to 0 because they represent agents' directions to themselves 
+        # Set the diagonals to ~0 because they represent agents' directions to themselves 
         diagonal_mask = np.arange(dir_agents.shape[0])
         dir_agents[diagonal_mask, diagonal_mask] = np.array([1e-10,1e-10])
 
