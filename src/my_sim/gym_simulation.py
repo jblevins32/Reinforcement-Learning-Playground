@@ -34,6 +34,7 @@ class MRPP_Env(gym.Env):
         self.num_environments = kwargs.get('num_environments',1)
         self.n_actions = 2
         self.n_obs = 4
+        self.agent_radius = kwargs.get('agent_radius',1.5)
 
         self.render_mode = render_mode
 
@@ -44,7 +45,7 @@ class MRPP_Env(gym.Env):
         self.observation_space = spaces.Box(low=0,high=np.max(self.map_size), shape=(self.num_agents,self.n_obs), dtype=float)
 
         # Create the map
-        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.num_environments, self.n_actions)
+        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.num_environments, self.n_actions, self.agent_radius)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=self.seed_value)
@@ -93,7 +94,7 @@ class MRPP_Env(gym.Env):
         return self.map.plot_env()
 
 class EnvMap():
-    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, num_environments, n_actions):
+    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, num_environments, n_actions,agent_radius):
         self.num_agents = num_agents
         self.map_width = map_size[0]
         self.map_height = map_size[1]
@@ -103,6 +104,7 @@ class EnvMap():
         self.dt = dt
         self.num_environments = num_environments
         self.n_actions = n_actions
+        self.agent_radius = agent_radius
 
         self.done_threshold = done_threshold
 
@@ -117,9 +119,11 @@ class EnvMap():
         # Store agent paths
         self.agent_paths = [[] for _ in range(self.num_agents)]
 
+        # Store observations for plotting error
+        self.obs_vec = []
+
         # Initialize Matplotlib figure
-        self.fig, self.ax = plt.subplots(figsize=(self.map_width/10, self.map_height/10))
-        plt.ion()  # Enable interactive mode
+        self.fig, (self.ax1, self.ax2) = plt.subplots(2,1,figsize=(self.map_width/10, self.map_height/10))
 
     def reset(self, seed=None):
         
@@ -208,41 +212,49 @@ class EnvMap():
     
     def plot_env(self):
         # Return the rgb array for the video and also plot the env
-        self.ax.clear()  # Clear previous plot
-        self.ax.set_xlim(0, self.map_width)
-        self.ax.set_ylim(0, self.map_height)
+        self.ax1.clear()  # Clear previous plot
+
+        self.ax1.set_xlim(0, self.map_width)
+        self.ax1.set_ylim(0, self.map_height)
 
         # Draw environment background
         rectangle = plt.Rectangle((0,0), self.map_width, self.map_height, color='green', alpha=0.25)
-        self.ax.add_patch(rectangle)
+        self.ax1.add_patch(rectangle)
 
-        # Plot robots
-        self.ax.scatter(self.robot_positions[:,1], self.robot_positions[:,2], c='blue', linewidths=10)
-        self.ax.scatter(self.robot_targets[:,1], self.robot_targets[:,2], c='red', linewidths=10)
+        # Plot robots and targets
+        self.ax1.scatter(self.robot_positions[:,1], self.robot_positions[:,2], c='blue', linewidths=self.agent_radius*6.66)
+        self.ax1.scatter(self.robot_targets[:,1], self.robot_targets[:,2], c='red', linewidths=self.agent_radius*6.66)
 
         # Plot robot paths
         for path in self.agent_paths:
             if len(path) > 1:
                 path_x, path_y = zip(*path)
-                self.ax.plot(path_x, path_y, 'k--', alpha=0.6)  # Dotted black line for paths
+                self.ax1.plot(path_x, path_y, 'k--', alpha=0.6)  # Dotted black line for paths
 
         # Label robots
         for robot in self.robot_positions:
-            self.ax.text(robot[1], robot[2], str(int(robot[0])), color='white', ha='center', va='center')
+            self.ax1.text(robot[1], robot[2], str(int(robot[0])), color='white', ha='center', va='center')
 
         # Label targets
         for target in self.robot_targets:
-            self.ax.text(target[1], target[2], str(int(target[0])), color='white', ha='center', va='center')
+            self.ax1.text(target[1], target[2], str(int(target[0])), color='white', ha='center', va='center')
 
         # Plot obstacles
         for obstacle in self.obstacle_positions:
             circle = plt.Circle((obstacle[0], obstacle[1]), obstacle[2], color='grey', alpha=0.5)
-            self.ax.add_patch(circle)
+            self.ax1.add_patch(circle)
 
-        # plt.pause(0.1)
+        # Error plot:
+        obs = self.get_obs()
+        self.obs_vec = np.append(self.obs_vec, np.linalg.norm(obs[:,:2] - obs[:,2:]))
+        self.ax2.plot(self.obs_vec)
+
+        # self.fig.legend()
+        self.fig.show()
+        plt.pause(0.01)
 
         # Save rgb array
-        self.fig.canvas.draw()
-        img_array = np.array(self.fig.canvas.renderer.buffer_rgba())
+        # self.fig.canvas.draw()
+        # img_array = np.array(self.fig.canvas.renderer.buffer_rgba())
 
-        return img_array
+        # return img_array

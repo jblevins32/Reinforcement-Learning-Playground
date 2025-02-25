@@ -5,9 +5,10 @@
 
 
 # My simulation parameters
-num_agents: 3
+num_agents: 1
+agent_radius: 1.5
 map_size: [100,50]
-num_obstacles: 10
+num_obstacles: 5
 obstacle_radius_max: 15
 obstacle_cost: 5.0
 dynamics: "single_integrator"  # "unicycle" or "double_integrator"
@@ -15,13 +16,13 @@ max_episode_steps: 256
 communication_range: 10.0
 observation_range: 10.0
 centralized: False
-dt: 0.1
+dt: 0.05
 w_dist: 1
 w_coll: 1
 w_dir: 1
 w_goal: 1
-done_threshold: 5
-seed_value: 42
+done_threshold: 2
+seed_value: 39
 
 # Training specific parameters
 num_environments: 64
@@ -40,7 +41,7 @@ test_steps: 1000
 
 # Other parameters
 space: "cont" # disc or cont depending on env
-gym_model: "Ant-v5" 
+gym_model: "MRPP_Env" 
 # Humanoid-v5 
 # Pusher-v5
 # HalfCheetah-v5 
