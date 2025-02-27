@@ -53,6 +53,7 @@ while (count_steps < config['test_steps']):
         action = dist.sample()
 
     obs, reward, done, truncated, _ = env.step(action.numpy())
+    env.render()
     print(f'step taken {count_steps}')
     done = done or truncated
 

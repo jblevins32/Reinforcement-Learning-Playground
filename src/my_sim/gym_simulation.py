@@ -135,8 +135,8 @@ class EnvMap():
         self.generate_obstacles()
 
         # Reset the agents until starts and goals are not on obstacles
-        collisions = True
-        while collisions == True:
+        collisions = 1
+        while collisions != 0:
             self.generate_locations()
             collisions = self.check_collisions()
 
@@ -175,7 +175,7 @@ class EnvMap():
         
         collisions = np.sum(dist_obstacles_radius_r_agent < 0) + np.sum(dist_agents_radius_r < 0) + np.sum(dist_obstacles_radius_r_target < 0)
 
-        return int(collisions) != 0
+        return int(collisions)
     
         # Distance formula broadcasting with robots and obstacles
         dist_mask = np.sqrt((self.obstacle_positions[:,0].reshape(-1,1) - self.robot_positions[:,1].reshape(1,-1))**2 + (self.obstacle_positions[:,1].reshape(-1,1) - self.robot_positions[:,2].reshape(1,-1))**2) < self.obstacle_positions[:,2].reshape(-1,1)
@@ -221,13 +221,14 @@ class EnvMap():
 
         # Get straight line distance from each agent border to obstacle border: num_agents x num_agents
         dist_agents_radius_r = dist_agents_centers_r - self.agent_radius*2
-        dist_agents_radius_r[diagonal_mask, diagonal_mask] = 0
+        dist_agents_radius_r[diagonal_mask, diagonal_mask] = 1e-10
 
         # Get directions of agents from each obstacle: num_agents x num_agents x 2
         dist_agents_centers_r = np.expand_dims(dist_agents_centers_r, axis=-1)
         dist_agents_centers_r[diagonal_mask, diagonal_mask] = 1
 
         dir_agents = dist_agents_centers_xy/dist_agents_centers_r
+        dir_agents[diagonal_mask, diagonal_mask] = np.array([1e-10,1e-10])
 
         return dist_agents_radius_r, dir_agents
 

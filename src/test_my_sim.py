@@ -60,7 +60,7 @@ def Obstacle_avoid_control(obs, env):
 
     kp_collisions_agents = 20
     kp_dist = 2
-    kp_collisions_obstacles = 20
+    kp_collisions_obstacles = 10
 
     # Distance control: correct for error of agents away from their goals
     distance_control = robot_positions[:,2:] - robot_positions[:,0:2]
@@ -74,12 +74,12 @@ def Obstacle_avoid_control(obs, env):
     if num_agents > 1:
         dist_agents_radius_r, dir_agents = map.check_agent_distances()
 
+        inv_law = 1/(dist_agents_radius_r**2)
+
         # Set the diagonals to ~0 because they represent agents' directions to themselves 
         diagonal_mask = np.arange(dir_agents.shape[0])
-        dir_agents[diagonal_mask, diagonal_mask] = np.array([1e-10,1e-10])
-
-        inv_law = 1/(dist_agents_radius_r**2)
-        inv_law[diagonal_mask, diagonal_mask] = 1e-10 # Set the diagonals to 0 because they represent agents' distances to themselves. Doing this here so we don't divide by 0 on the inv_law
+        inv_law[diagonal_mask, diagonal_mask] = 0 # Set the diagonals to 0 because they represent agents' distances to themselves. Doing this here so we don't divide by 0 on the inv_law
+        
         collision_control_agents = np.sum(np.expand_dims(inv_law,axis=-1) * dir_agents,axis=0)
     else:
         collision_control_agents = 0
