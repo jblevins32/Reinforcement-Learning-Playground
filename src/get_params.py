@@ -1,4 +1,4 @@
-from globals import root_dir
+from global_dir import root_dir
 import os
 import yaml
 

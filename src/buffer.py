@@ -33,7 +33,7 @@ class Buffer:
         self.rewards[t] = torch.Tensor(r)
 
         self.log_probs[t] = lp
-        self.not_dones[t] = 1 - torch.Tensor([d]) # take away [] if using vectored env
+        self.not_dones[t] = 1 - torch.Tensor(d)
 
     def calc_returns(self, gamma = .99):
         self.returns = deepcopy(self.rewards)

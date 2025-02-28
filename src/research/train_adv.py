@@ -1,30 +1,22 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from agent import Agent
-from get_params import GetParams
 from my_sim.gym_simulation import *
 from create_env import CreateEnv
-from tensorboard_setup import SetupBoard
 import torch
-import os
-from globals import root_dir
-
-# Import args from config.yaml
-config = GetParams()
+from global_dir import root_dir
 
 print(torch.version.cuda)
 print(torch.cuda.is_available())
 
-# Tensor board setup
-writer = SetupBoard(config['rl_alg'])
-
 # Create environment
-env,n_actions,n_obs = CreateEnv(operation="train")
-
-# Arguments to all sim environments
-args = (config['rl_alg'],config['num_environments'],config['epochs'],config['t_steps'],env,n_obs,n_actions,config['discount'],config['epsilon'],config['lr'],config['save_every'],config['gym_model'],config['num_agents'], config['space'], writer)
+env,n_obs,n_actions,writer,config = CreateEnv(operation="train")
 
 # Start Training 
-agent1 = Agent(*args)
-agent2 = Agent(*args)
+agent1 = Agent(env,n_obs,n_actions,writer,**config)
+agent2 = Agent(env,n_obs,n_actions,writer,**config)
 
 agent1_reward = 0
 agent2_reward = 0

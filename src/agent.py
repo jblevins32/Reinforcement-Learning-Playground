@@ -1,58 +1,63 @@
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 from buffer import *
-from globals import root_dir
+from global_dir import root_dir
 import os
 import time
+import numpy as np
 from torch.distributions import Normal
 from torch.distributions import Categorical
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
-from RL_algorithms.ppo import *
-from RL_algorithms.ppo_adv import *
+from RL_algorithms.ppo_disc import *
 from RL_algorithms.ppo_cont import *
 
 ############################################################################################################
 
 # Load and run the agent
 class Agent():
-    def __init__(self, rl_alg,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space, writer):
+    def __init__(self, env, n_obs, n_actions, writer, **kwargs):
 
+        self.env = env
+        self.n_obs = n_obs
+        self.n_actions = n_actions
+        self.writer = writer
+
+        self.epochs = kwargs.get('epochs',1000)
+        self.discount = kwargs.get('discount',0.99)
+        self.t_steps = kwargs.get('t_steps',256)
+        self.save_every = kwargs.get('save_every',250)
+        self.gym_model = kwargs.get('gym_model_train','Ant-v5')
+        self.num_environments = kwargs.get('num_environments',64)
+        self.num_agents = kwargs.get('num_agents',1)
+        self.space = kwargs.get('space','CONT')
+        self.rl_alg = kwargs.get('rl_alg','PPO_CONT')
+        self.epsilon = kwargs.get('epsilon',0.2)
+        self.lr = kwargs.get('lr',1e-3)
+
+        # rl_alg,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space, writer
         # Initialize plot variables
         self.epoch_vec = []
         self.reward_vec = []
         self.frames = []
 
-        self.epochs = epochs
-        self.env = env
-        self.discount = discount
-        self.t_steps = t_steps
-        self.save_every = save_every
-        self.gym_model = gym_model
-        self.num_environments = num_environments
-        self.n_obs = n_obs
-        self.n_actions = n_actions
-        self.num_agents = num_agents
-        self.space = space
-        self.writer = writer
-
         # Choose RL algorithm
-        if rl_alg == "PPO":
-            self.rl_alg = PPO(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
-        elif rl_alg == "REINFORCE":
+        if self.rl_alg == "PPO":
+            self.rl_alg = PPO_DISC(input_dim=n_obs, output_dim=n_actions, epsilon=self.epsilon)
+        elif self.rl_alg == "REINFORCE":
             self.rl_alg = REINFORCE(input_dim=n_obs, output_dim=n_actions)
-        elif rl_alg == "VPG":
+        elif self.rl_alg == "VPG":
             self.rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
-        elif rl_alg =="PPO_ADV":
-            self.rl_alg = PPO_ADV(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
-        elif rl_alg =="PPO_CONT":
-            self.rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, epsilon=epsilon)
+        elif self.rl_alg =="PPO_ADV":
+            self.rl_alg = PPO_ADV(input_dim=n_obs, output_dim=n_actions, epsilon=self.epsilon)
+        elif self.rl_alg =="PPO_CONT":
+            self.rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, epsilon=self.epsilon)
 
         # Choose optimizer
-        self.optimizer = Adam(params=self.rl_alg.parameters(), lr=lr)
+        self.optimizer = Adam(params=self.rl_alg.parameters(), lr=self.lr)
 
         # Create buffer
-        self.buffer = Buffer(n_steps=self.t_steps, n_envs=num_environments, n_obs=n_obs, n_actions=n_actions, space=space)
+        self.buffer = Buffer(n_steps=self.t_steps, n_envs=self.num_environments, n_obs=n_obs, n_actions=n_actions, space=self.space)
     
     def train(self):
         

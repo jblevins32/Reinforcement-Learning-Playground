@@ -1,34 +1,39 @@
 import gymnasium as gym
 from get_params import GetParams
+from tensorboard_setup import SetupBoard
 
 def CreateEnv(operation):
 
+    # Import args from config.yaml
     config = GetParams()
+
+    # Tensor board setup
+    writer = SetupBoard(config['rl_alg'])
 
     # Create environment
     if operation == "train":
-        if config['gym_model'] == "MRPP_Env":
-            env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array", **config) for _ in range(config['num_environments'])])
+        if config['gym_model_train'] == "MRPP_Env":
+            env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model_train'], render_mode="rgb_array", **config) for _ in range(config['num_environments'])])
             n_actions = env.action_space.shape[1]*env.action_space.shape[2]
             n_obs = env.observation_space.shape[1]*env.observation_space.shape[2]
         else:
             if config['space'] == "cont":
-                env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
+                env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model_train'], render_mode="rgb_array") for _ in range(config['num_environments'])])
                 n_actions = env.action_space.shape[1]
                 n_obs = env.observation_space.shape[1]
             elif config['space'] == "disc":
-                env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
+                env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model_train'], render_mode="rgb_array") for _ in range(config['num_environments'])])
                 n_actions = 2 # 2 for cart-pole
                 n_obs = env.observation_space.shape[1]
             
     elif operation == "test":
-        if config['gym_model'] == "MRPP_Env":
-            env = gym.make(config['gym_model'], render_mode="rgb_array", **config)
+        if config['gym_model_test'] == "MRPP_Env":
+            env = gym.make(config['gym_model_test'], render_mode="rgb_array", **config)
             n_actions = env.action_space.shape[0]*env.action_space.shape[1]
             n_obs = env.observation_space.shape[0]*env.observation_space.shape[1]
         else:
-            env = gym.make(config['gym_model'], render_mode="rgb_array")
+            env = gym.make(config['gym_model_test'], render_mode="rgb_array")
             n_actions = env.action_space.shape[0]
             n_obs = env.observation_space.shape[0]
 
-    return env, n_actions, n_obs
+    return env, n_obs, n_actions, writer, config

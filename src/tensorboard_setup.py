@@ -1,5 +1,5 @@
 import os
-from globals import root_dir
+from global_dir import root_dir
 from torch.utils.tensorboard import SummaryWriter
 import webbrowser
 import subprocess

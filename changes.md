@@ -4,10 +4,10 @@
     - update obs to include obstacles
     - update reward weights
 - Tensorboard not updating with discrete envs
-- Give control caps to MRPP env
 
 ## RARL
 - They assume transition function has errors instead of perfect environment transitions
+- Create plotting for attacked case
 
 ## General
 - Make continuous algs (DDPG)
