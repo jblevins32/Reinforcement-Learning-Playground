@@ -33,17 +33,16 @@ class MRPP_Env(gym.Env):
         self.seed_value = kwargs.get("seed_value", None)
         self.num_environments = kwargs.get('num_environments',1)
         self.n_actions = 2
-        # self.n_obs = 4
-        self.n_obs = 4*self.num_agents + 5*3 # 4 observations/robot (location and target location) * number of robots + 5 obsacles * 3 observations/obstacle (location and radius). This is for flattening.
+        self.n_obs = 4
         self.agent_radius = kwargs.get('agent_radius',1.5)
 
         self.render_mode = render_mode
 
-        # Action space: x and y velocities for each agent: 2
+        # Action space: x and y velocities for each agent
         self.action_space = spaces.Box(low=-1,high=1, shape=(self.num_agents,self.n_actions), dtype=float)
 
-        # Create observation space: x and y position for each agent and for each target, and 
-        self.observation_space = spaces.Box(low=0,high=np.max(self.map_size), shape=(1,self.n_obs), dtype=float)
+        # Create observation space: x and y position for each agent and same for each target
+        self.observation_space = spaces.Box(low=0,high=np.max(self.map_size), shape=(self.num_agents,self.n_obs), dtype=float)
 
         # Create the map
         self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.num_environments, self.n_actions, self.agent_radius)
@@ -58,13 +57,13 @@ class MRPP_Env(gym.Env):
         self.map.reset(seed=self.seed_value)
 
         # Get initial observation
-        obs_regular_justagents, obs_flattened_all = self.map.get_obs()
+        obs = self.map.get_obs()
 
         # self.render()
 
         info = {}
 
-        return obs_flattened_all[np.newaxis], info
+        return obs, info
     
     def seed(self, seed=None):
         """ Seed the environment and sub-components """
@@ -80,7 +79,7 @@ class MRPP_Env(gym.Env):
 
         # Get reward and observation
         reward = self.map.get_reward(action)
-        obs_regular_justagents, obs_flattened_all = self.map.get_obs() # observation done after the action
+        obs = self.map.get_obs() # observation done after the action
 
         info = {}
 
@@ -89,7 +88,7 @@ class MRPP_Env(gym.Env):
 
         # self.render()
 
-        return obs_flattened_all[np.newaxis], reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, info
     
     def render(self):
         return self.map.plot_env()
@@ -185,7 +184,7 @@ class EnvMap():
         return collisions
     
     def check_obstacle_distances(self, agent_or_target):
-        obs, _ = self.get_obs()
+        obs = self.get_obs()
 
         # Flexibility to check agents and targets for collisions
         if agent_or_target == "agent":
@@ -211,7 +210,7 @@ class EnvMap():
         return dist_obstacles_radius_r, dir_obstacles
 
     def check_agent_distances(self):
-        obs, _ = self.get_obs()
+        obs = self.get_obs()
         diagonal_mask = np.arange(self.num_agents)
         
         # Get each agent's x and y center distances from each other's center: num_agents x num_agents x 2
@@ -234,10 +233,7 @@ class EnvMap():
         return dist_agents_radius_r, dir_agents
 
     def get_obs(self):
-        obs_regular_justagents = np.concatenate((self.robot_positions[:, 1:], self.robot_targets[:, 1:]), axis=1)  # Shape: (num_agents, 4)
-        obs_flattened_all = np.concatenate((self.robot_positions[:, 1:].flatten(), self.robot_targets[:, 1:].flatten(), self.obstacle_positions.flatten()))  # Shape: (1, something)
-
-        return obs_regular_justagents, obs_flattened_all
+        return np.concatenate((self.robot_positions[:, 1:], self.robot_targets[:, 1:]), axis=1)  # Shape: (num_agents, 4)
     
     def perform_action(self, actions):
 
@@ -311,7 +307,7 @@ class EnvMap():
             self.ax1.add_patch(circle)
 
         # Error plot:
-        obs, _ = self.get_obs()
+        obs = self.get_obs()
         self.obs_vec = np.append(self.obs_vec, np.linalg.norm(obs[:,:2] - obs[:,2:]))
         self.ax2.plot(self.obs_vec)
 

@@ -1,19 +1,19 @@
 ############### REGULAR TRAINING/TESTING ###############
 # Training specific parameters
 num_environments: 64
-epochs: 1500
+epochs: 500
 t_steps: 256 # Number of rollouts per epoch
-save_every: 250 # How many epochs to save the model (or adv_iters for adversarial training)
+save_every: 50 # How many epochs to save the model (or adv_iters for adversarial training)
 discount: 0.99
 epsilon: 0.2
 lr: .001
 rl_alg: "PPO_CONT"
-gym_model_train: "Ant-v5" 
+gym_model_train: "MRPP_Env" 
 space: "cont" # disc or cont depending on env
 
 # Testing specific parameters
 gym_model_test: "MRPP_Env" 
-test_model_reward: "ADV_668.99329" # Final reward of saved model (to differentiate them)
+test_model_reward: "13.63955" # Final reward of saved model (to differentiate them)
 test_steps: 1000
 record_period: 1
 
