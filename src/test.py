@@ -6,9 +6,11 @@ from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo_disc import *
 from RL_algorithms.ppo_cont import *
+from RL_algorithms.sac import *
 from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 from my_sim.gym_simulation import *
 from create_env import CreateEnv
+from get_action import GetAction
 
 config = GetParams()
 
@@ -30,12 +32,35 @@ elif config['rl_alg'] == "VPG":
     rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
 elif config['rl_alg'] =="PPO_CONT":
     rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, epsilon=config['epsilon'])
+elif config['rl_alg'] =="SAC":
+    rl_alg = SAC(input_dim=n_obs, output_dim=n_actions, lr=config['lr'])
 
 # Load the model parameters
 model_dir = os.path.join(root_dir,"models",f"{config['gym_model_test']}_{config['rl_alg']}_{config['test_model_reward']}.pth")
 rl_alg.load_state_dict(torch.load(model_dir))
 
+# THIS HERE IS FOR MY ENV
 # Run inference and record video
+# obs = env.reset()
+# obs = obs[0]
+# done = False
+# count_steps = 0
+# while (count_steps < config['test_steps']):
+# # while (done is False) and (count_steps < config['test_steps']):
+#     count_steps += 1
+#     with torch.no_grad():
+#         mean = rl_alg.policy(torch.Tensor(obs.flatten()))
+#         std = torch.exp(rl_alg.log_std)
+#         dist = torch.distributions.Normal(mean, std)
+#         action = dist.sample()
+
+#     obs, reward, done, truncated, _ = env.step(action.numpy())
+#     env.render()
+#     print(f'step taken {count_steps}')
+#     done = done or truncated
+
+# Run inference and record video
+
 obs = env.reset()
 obs = obs[0]
 done = False
@@ -44,10 +69,7 @@ while (count_steps < config['test_steps']):
 # while (done is False) and (count_steps < config['test_steps']):
     count_steps += 1
     with torch.no_grad():
-        mean = rl_alg.policy(torch.Tensor(obs.flatten()))
-        std = torch.exp(rl_alg.log_std)
-        dist = torch.distributions.Normal(mean, std)
-        action = dist.sample()
+        action,_,_ = GetAction(rl_alg, torch.Tensor(obs), target=False,grad=False)
 
     obs, reward, done, truncated, _ = env.step(action.numpy())
     env.render()

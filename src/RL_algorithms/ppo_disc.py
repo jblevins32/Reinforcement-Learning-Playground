@@ -9,7 +9,7 @@ class PPO_DISC(nn.Module):
         - large jumps can fall off of a cliff
     '''
     def __init__(self, input_dim, output_dim, epsilon):
-        super(PPO, self).__init__()
+        super(PPO_DISC, self).__init__()
         
         self.need_grad = False
         self.epsilon = epsilon

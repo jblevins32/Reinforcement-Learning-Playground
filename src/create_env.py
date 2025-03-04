@@ -1,6 +1,6 @@
 import gymnasium as gym
 from get_params import GetParams
-from tensorboard_setup import SetupBoard
+from tensorboard_setup import *
 
 def CreateEnv(operation):
 
@@ -8,7 +8,8 @@ def CreateEnv(operation):
     config = GetParams()
 
     # Tensor board setup
-    writer = SetupBoard(config['rl_alg'])
+    SetupBoard()
+    writer = create_writer(config['rl_alg'])
 
     # Create environment
     if operation == "train":
