@@ -16,14 +16,9 @@ def GetAction(rl_alg, obs, target, grad):
             elif rl_alg.name == "PPO_CONT":
                 if target:
                     mean = rl_alg.policy_target(obs)
-<<<<<<< HEAD:src/get_action.py
-                else: mean = rl_alg.policy(obs)
-                std = torch.exp(rl_alg.log_std) # Use clamp?
-=======
-                else:
+                else: 
                     mean = rl_alg.policy(obs)
-                std = torch.exp(rl_alg.log_std)
->>>>>>> improve:reinforcement_learning_playground/get_action.py
+                std = torch.exp(rl_alg.log_std) # Use clamp?
 
             # Step 2: create a distribution from the logits (raw outputs) and sample from it
             dist = torch.distributions.Normal(mean, std)

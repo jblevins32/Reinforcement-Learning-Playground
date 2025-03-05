@@ -11,12 +11,7 @@ class PPO_CONT(nn.Module):
         - smaller updates are more likely to converge to an optimal solutions
         - large jumps can fall off of a cliff
     '''
-<<<<<<< HEAD:src/RL_algorithms/ppo_cont.py
     def __init__(self, input_dim, output_dim, lr):
-=======
-
-    def __init__(self, input_dim, output_dim, epsilon, lr):
->>>>>>> improve:reinforcement_learning_playground/RL_algorithms/ppo_cont.py
         super(PPO_CONT, self).__init__()
 
         self.name = "PPO_CONT"

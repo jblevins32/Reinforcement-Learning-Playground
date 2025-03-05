@@ -215,7 +215,9 @@ class Agent():
 
             elif self.rl_alg.on_off_policy == "off": # Use a buffer for off policy
                 obs_new = torch.tensor(
-                    obs_new, device=self.device).to(torch.float)                
+                    obs_new, device=self.device).to(torch.float)   
+                reward = torch.tensor(
+                    reward, device=self.device).to(torch.float)              
                 self.buffer.store(obs, actions, reward*0.01, obs_new, done)
                 obs = obs_new
             

@@ -6,7 +6,7 @@ t_steps: 256 # Number of rollouts per epoch
 save_every: 50 # How many epochs to save the model (or adv_iters for adversarial training)
 discount: 0.99
 lr: .001
-rl_alg: "SAC"
+rl_alg: "PPO_CONT"
 gym_model_train: "Ant-v5" 
 space: "cont" # disc or cont depending on env
 
@@ -25,6 +25,10 @@ record_period: 1
 # Ant-v5 
 # Swimmer-v5
 # MRPP_Env
+
+### Current working rl alg options:
+# SAC
+# PPO
 
 ############### Adversarial parameters ###############
 adv_iter: 30
