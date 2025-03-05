@@ -27,6 +27,8 @@ class TrajData:
         # Reshape obs if using my own env
         if len(s.shape) > 2:
             s = s.reshape(*s.shape[:-2],-1)
+            a = a.squeeze(-2)
+            lp = lp.squeeze(-1)
 
         self.states[t] = s
         self.actions[t] = a

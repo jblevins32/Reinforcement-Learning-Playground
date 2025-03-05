@@ -13,5 +13,5 @@ class ReplayBuffer():
 
     def sample(self):
         batch = random.sample(self.buffer, self.batch_size)
-        device = "cpu"
-        return [torch.stack(e).to(device) for e in zip(*batch)]  # states, actions, rewards, next_states, not_dones
+        # device = "cpu"
+        return [torch.stack(e) for e in zip(*batch)]  # states, actions, rewards, next_states, not_dones

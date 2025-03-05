@@ -87,7 +87,9 @@ class MRPP_Env(gym.Env):
         # If we want to cut it off after a certain amount of steps
         truncated = False
 
-        # self.render()
+        # Render the env during training if using one env
+        if self.num_environments == 1:
+            self.render()
 
         return obs_flattened_all[np.newaxis], reward, terminated, truncated, info
     
@@ -271,7 +273,7 @@ class EnvMap():
             dir_accuracy += np.dot(desired_norm_dir, control_norm_dir)
 
         # Reaching goal. Want more.
-
+        print(f'dist reward: {(- self.w_dist * dist_rmse)}, collision reward: {(- self.w_coll * num_collisions)}, dir reward: {(self.w_dir * dir_accuracy)}, goal reward: {(self.w_goal * self.done)}')
         reward = (- self.w_dist * dist_rmse) + (- self.w_coll * num_collisions) + (self.w_dir * dir_accuracy) + (self.w_goal * self.done)
 
         return reward

@@ -10,7 +10,7 @@ class PPO_CONT(nn.Module):
         - smaller updates are more likely to converge to an optimal solutions
         - large jumps can fall off of a cliff
     '''
-    def __init__(self, input_dim, output_dim, epsilon, lr):
+    def __init__(self, input_dim, output_dim, lr):
         super(PPO_CONT, self).__init__()
         
         self.name = "PPO_CONT"

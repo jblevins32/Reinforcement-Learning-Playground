@@ -31,7 +31,7 @@ elif config['rl_alg'] == "REINFORCE":
 elif config['rl_alg'] == "VPG":
     rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
 elif config['rl_alg'] =="PPO_CONT":
-    rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, epsilon=config['epsilon'])
+    rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, lr=config['lr'])
 elif config['rl_alg'] =="SAC":
     rl_alg = SAC(input_dim=n_obs, output_dim=n_actions, lr=config['lr'])
 

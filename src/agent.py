@@ -57,7 +57,7 @@ class Agent():
         elif self.rl_alg == "DDPG":
             self.rl_alg = DDPG(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
         elif self.rl_alg =="PPO_CONT":
-            self.rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, epsilon=self.epsilon, lr=self.lr)
+            self.rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
 
         # Create traj data or buffer
         if self.rl_alg.on_off_policy == "off":
@@ -89,11 +89,11 @@ class Agent():
 
             if self.rl_alg.on_off_policy == "on":
                 reward_to_log = round(float(self.traj_data.rewards.mean()),5)
-                reward_to_log = torch.mean(avg_reward)
+                reward_to_log = avg_reward
                 loss_to_log = policy_loss.item()
             
             elif self.rl_alg.on_off_policy == "off":
-                reward_to_log = torch.mean(avg_reward)
+                reward_to_log = avg_reward
                 loss_to_log = -policy_loss.item()
 
             # Update tensorboard and terminal
@@ -195,16 +195,16 @@ class Agent():
                 self.traj_data.store(t, obs, actions, reward, log_probs, done)
                 reward = torch.Tensor(reward)
                 obs = torch.Tensor(obs_new)
-                total_reward += reward
 
             elif self.rl_alg.on_off_policy == "off": # Use a buffer for off policy
                 obs_new = torch.Tensor(obs_new)
                 reward = torch.Tensor(reward)
-                self.buffer.store(obs, actions, reward, obs_new, done)
+                self.buffer.store(obs, actions, reward*0.01, obs_new, done)
                 obs = obs_new
-                total_reward += reward
+            
+            total_reward += reward
 
-        avg_reward = total_reward/t
+        avg_reward = total_reward.mean().item() / self.t_steps
         return avg_reward
 
     def plot_reward(self, epoch):

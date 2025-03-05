@@ -1,6 +1,6 @@
 ############### REGULAR TRAINING/TESTING ###############
 # Training specific parameters
-num_environments: 64
+num_environments: 32
 epochs: 500
 t_steps: 256 # Number of rollouts per epoch
 save_every: 50 # How many epochs to save the model (or adv_iters for adversarial training)
@@ -12,8 +12,8 @@ space: "cont" # disc or cont depending on env
 
 # Testing specific parameters
 gym_model_test: "Ant-v5" 
-test_model_reward: "0.47152" # Final reward of saved model (to differentiate them)
-test_steps: 1000
+test_model_reward: "0.75463" # Final reward of saved model (to differentiate them)
+test_steps: 500
 record_period: 1
 
 ### Current env options:
@@ -37,12 +37,12 @@ map_size: [100,50]
 num_obstacles: 5
 obstacle_radius_max: 15
 dynamics: "single_integrator"  # "unicycle" or "double_integrator"
-dt: 0.01
+dt: 0.05
 w_dist: 1
 w_coll: 5
 w_dir: 5
 w_goal: 1
-done_threshold: 2
+done_threshold: 5
 u_clip: 150 # bound the control command to mitigate jerky behavior
 seed_value: 42
 
@@ -53,7 +53,7 @@ centralized: False
 
 # Learning case
 obstacle_cost: 5.0
-max_episode_steps: 256
+max_episode_steps: 350
 
 # Attack case
 test_attack: True

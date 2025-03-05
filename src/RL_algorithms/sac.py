@@ -53,27 +53,33 @@ class SAC(nn.Module):
         self.policy = nn.Sequential(
             nn.Linear(input_dim, 64),
             nn.ReLU(),
-            nn.Linear(64,output_dim*2)
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, output_dim*2)
         )
 
         self.critic_1 = nn.Sequential(
-            nn.Linear(input_dim+output_dim,64),
+            nn.Linear(input_dim+output_dim, 64),
             nn.ReLU(),
-            nn.Linear(64,1)
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
         )
 
         self.critic_2 = nn.Sequential(
-            nn.Linear(input_dim+output_dim,64),
+            nn.Linear(input_dim+output_dim, 64),
             nn.ReLU(),
-            nn.Linear(64,1)
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
         )
 
         self.critic_1_target = copy.deepcopy(self.critic_1)
         self.critic_2_target = copy.deepcopy(self.critic_2)
         self.policy_target = copy.deepcopy(self.policy)
 
-        self.critic_optimizer = Adam(list(self.critic_1.parameters()) + list(self.critic_2.parameters()),lr=lr)
-        self.policy_optimizer = Adam(self.policy.parameters(),lr=lr)
+        self.critic_optimizer = Adam(params=list(self.critic_1.parameters()) + list(self.critic_2.parameters()),lr=lr)
+        self.policy_optimizer = Adam(params=self.policy.parameters(),lr=lr)
 
         self.criterion = nn.MSELoss()
 
@@ -97,15 +103,15 @@ class SAC(nn.Module):
         q2 = self.critic_2(state_action_vec)
 
         # 4) Get target q, starting by getting  entropy H
-        _,_,dist = GetAction(self, next_states, target = False, grad=False)
+        _,_,dist = GetAction(self, next_states, target = False, grad=True)
         H = dist.entropy()
         
         q_next = torch.min(q1_next,q2_next)
+        # q_target = rewards.unsqueeze(-1) + (self.gamma*q_next + self.alpha*H.sum(-1).unsqueeze(-1))*not_dones.unsqueeze(-1)
         q_target = rewards.unsqueeze(-1) + (self.gamma*q_next + self.alpha*H)*not_dones.unsqueeze(-1)
 
         # 5) Get q loss
-        criterion = nn.MSELoss()
-        critic_loss = criterion(q1,q_target) + criterion(q2,q_target)
+        critic_loss = self.criterion(q1,q_target) + self.criterion(q2,q_target)
 
         # Get policy loss
         actions,_,dist = GetAction(self, states, target = False, grad = True)
