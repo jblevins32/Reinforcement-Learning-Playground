@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "reinforcement_learning_playground"
+version = "0.1.0"
+description = ""
+authors = ["Jacob Blevins, Brandon Ho"]
+readme = "README.md"
+packages = [{include = "reinforcement_learning_playground"}]
+
+[tool.poetry.dependencies]
+python = "^3.9, <3.11"
+numpy = "^1.23.5"
+matplotlib = "^3.9"
+gymnasium = {extras = ["mujoco"], version = "^1.1.0"}
+torch = {version = "2.4.0", source = "torch"}
+pyyaml = "^6.0.2"
+tensorboard = "^2.19.0"
+moviepy = "^2.1.2"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "supplemental"
+
+
+[[tool.poetry.source]]
+name = "dgl"
+url = "https://data.dgl.ai/wheels/torch-2.4/cu121/repo.html"
+priority = "supplemental"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
