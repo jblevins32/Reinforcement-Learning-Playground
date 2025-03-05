@@ -16,6 +16,8 @@ class PPO_DISC(nn.Module):
         self.need_grad = False
         self.epsilon = epsilon
         self.name = "PPO"
+        self.device = torch.device(
+            "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
         # Learns the mean
         self.policy = nn.Sequential(
@@ -24,7 +26,7 @@ class PPO_DISC(nn.Module):
             nn.Linear(64, 64),
             nn.ReLU(),
             nn.Linear(64, output_dim)
-        )
+        ).to(self.device)
 
         # Learns the value
         self.critic = nn.Sequential(
@@ -33,7 +35,7 @@ class PPO_DISC(nn.Module):
             nn.Linear(64, 64),
             nn.ReLU(),
             nn.Linear(64, 1)
-        )
+        ).to(self.device)
 
     def loss_func(self, buffer):
 

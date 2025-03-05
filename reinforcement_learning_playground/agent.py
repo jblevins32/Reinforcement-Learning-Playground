@@ -40,6 +40,8 @@ class Agent():
         self.epsilon = kwargs.get('epsilon', 0.2)
         self.lr = kwargs.get('lr', 1e-3)
         self.gamma = kwargs.get('gamma', 0.99)
+        self.device = torch.device(
+            "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
         # rl_alg,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space, writer
         # Initialize plot variables
@@ -83,7 +85,7 @@ class Agent():
 
             # Reset the environment at beginning of each epoch
             obs, _ = self.env.reset()
-            obs = torch.Tensor(obs)
+            obs = torch.tensor(obs, device=self.device).to(torch.float)
 
             # Rollout
             if self.space == "cont":
@@ -191,7 +193,7 @@ class Agent():
 
             # Step 4: store data in traj_data
             self.traj_data.store(t, obs, actions, reward, log_probs, done)
-            obs = torch.Tensor(obs_new)
+            obs = torch.tensor(obs_new, device=self.device).to(torch.float)
 
     def rollout_cont(self, obs):
         total_reward = 0
@@ -203,19 +205,22 @@ class Agent():
 
             # Step 3: take the action in the environment, using the action as a control command to the robot model.
             obs_new, reward, done, truncated, infos = self.env.step(
-                actions.numpy())
+                actions.cpu().numpy())
             done = done | truncated  # Change done if the episode is truncated
 
             # Step 4: store data in traj_data
             if self.rl_alg.on_off_policy == "on":
                 self.traj_data.store(t, obs, actions, reward, log_probs, done)
-                reward = torch.Tensor(reward)
-                obs = torch.Tensor(obs_new)
+                reward = torch.tensor(
+                    reward, device=self.device).to(torch.float)
+                obs = torch.tensor(obs_new, device=self.device).to(torch.float)
                 total_reward += reward
 
             elif self.rl_alg.on_off_policy == "off":  # Use a buffer for off policy
-                obs_new = torch.Tensor(obs_new)
-                reward = torch.Tensor(reward)
+                obs_new = torch.tensor(
+                    obs_new, device=self.device).to(torch.float)
+                reward = torch.tensor(
+                    reward, device=self.device).to(torch.float)
                 self.buffer.store(obs, actions, reward, obs_new, done)
                 obs = obs_new
                 total_reward += reward
@@ -250,7 +255,7 @@ class Agent():
 
             # Reset the environment at beginning of each epoch
             obs, _ = self.env.reset()
-            obs = torch.Tensor(obs)
+            obs = torch.tensor(obs, device=self.device).to(torch.float)
 
             # Rollout
             if self.space == "cont":
@@ -305,4 +310,4 @@ class Agent():
 
             # Step 4: store data in traj_data
             self.traj_data.store(t, obs, actions, reward, log_probs, done)
-            obs = torch.Tensor(obs_new)
+            obs = torch.tensor(obs_new, device=self.device).to(torch.float)

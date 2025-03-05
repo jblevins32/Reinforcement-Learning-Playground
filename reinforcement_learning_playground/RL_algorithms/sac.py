@@ -51,24 +51,26 @@ class SAC(nn.Module):
         self.tau = 0.1  # update rate for target policies
         self.alpha = 0.002
         self.gamma = 0.99
+        self.device = torch.device(
+            "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
         self.policy = nn.Sequential(
             nn.Linear(input_dim, 64),
             nn.ReLU(),
             nn.Linear(64, output_dim*2)
-        )
+        ).to(self.device)
 
         self.critic_1 = nn.Sequential(
             nn.Linear(input_dim+output_dim, 64),
             nn.ReLU(),
             nn.Linear(64, 1)
-        )
+        ).to(self.device)
 
         self.critic_2 = nn.Sequential(
             nn.Linear(input_dim+output_dim, 64),
             nn.ReLU(),
             nn.Linear(64, 1)
-        )
+        ).to(self.device)
 
         self.critic_1_target = copy.deepcopy(self.critic_1)
         self.critic_2_target = copy.deepcopy(self.critic_2)
