@@ -92,26 +92,28 @@ class Agent():
                 self.rollout_disc(obs)
 
             # Update parameters FOR ON POLICY
-            policy_loss = self.update()
+            policy_loss, critic_loss = self.update()
 
-            if self.rl_alg.on_off_policy == "on":
-                reward_to_log = round(float(self.traj_data.rewards.mean()),5)
-                reward_to_log = avg_reward
-                loss_to_log = policy_loss.item()
+            # if self.rl_alg.on_off_policy == "on":
+                # reward_to_log = round(float(self.traj_data.rewards.mean()),5)
 
-            elif self.rl_alg.on_off_policy == "off":
-                reward_to_log = avg_reward
-                loss_to_log = -policy_loss.item()
+            reward_to_log = round(avg_reward,5)
+            loss_to_log_policy = -round(policy_loss.item(),5)
+            loss_to_log_critic = -round(critic_loss.item(),5)
 
             # Update tensorboard and terminal
             self.writer.add_scalars(
                 "reward", {self.rl_alg.name: reward_to_log}, epoch)
-            self.writer.flush()
             self.writer.add_scalars(
-                "loss", {self.rl_alg.name: loss_to_log}, epoch)
+                "loss/policy", {self.rl_alg.name: loss_to_log_policy}, epoch)
+            self.writer.add_scalars(
+                "loss/critic", {self.rl_alg.name: loss_to_log_critic}, epoch)
             self.writer.flush()
 
-            print(f"Completed epoch {epoch + 1}: Total runtime {np.round((time.time()-time_start_train)/60,5)} min, Epoch runtime {np.round(time.time()-time_start_epoch,5)} sec, Reward: {reward_to_log}, Loss: {loss_to_log}")
+            epoch_runtime = time.time()-time_start_epoch
+            total_runtime = time.time()-time_start_train
+            epoch_runtime_avg = total_runtime/(epoch+1)
+            print(f"Completed epoch {epoch + 1}: Total runtime {np.round(total_runtime/60,3)}/{np.round(self.epochs*epoch_runtime_avg/60,3)} min, Epoch runtime {np.round(epoch_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
 
             # Save the model iteratively, naming based on final reward
             if ((epoch + 1) % self.save_every == 0) and epoch != 0:
@@ -119,6 +121,7 @@ class Agent():
                     root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}.pth")
                 os.makedirs(os.path.join(root_dir, "models"), exist_ok=True)
                 torch.save(self.rl_alg.state_dict(), model_dir)
+                print('Policy saved at', model_dir)
 
     def update(self):
 
@@ -131,7 +134,7 @@ class Agent():
             update_epochs = 10 if (self.rl_alg.name == "PPO_CONT") else 1
 
             for _ in range(update_epochs):
-                policy_loss = self.rl_alg.loss_func(self.traj_data)
+                policy_loss, critic_loss = self.rl_alg.loss_func(self.traj_data)
                 self.rl_alg.policy_optimizer.zero_grad()
                 policy_loss.backward()
                 self.rl_alg.policy_optimizer.step()
@@ -169,7 +172,7 @@ class Agent():
                 target_param.data.copy_(
                     self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
 
-        return policy_loss
+        return policy_loss, critic_loss
 
     def rollout_disc(self, obs):
         # Rollout for t timesteps

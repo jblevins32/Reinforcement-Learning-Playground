@@ -12,17 +12,18 @@ def GetAction(rl_alg, obs, target, grad):
                     mean, log_std = rl_alg.policy_target(obs).chunk(2, dim=-1)
                 else:
                     mean, log_std = rl_alg.policy(obs).chunk(2, dim=-1)
-                std = torch.exp(log_std)
+                std = torch.exp(log_std).clamp(0.1,0.4)  # Use clamp?
             elif rl_alg.name == "PPO_CONT":
                 if target:
                     mean = rl_alg.policy_target(obs)
                 else: 
                     mean = rl_alg.policy(obs)
-                std = torch.exp(rl_alg.log_std) # Use clamp?
+                std = torch.exp(rl_alg.log_std).clamp(0.1,0.4) # Use clamp?
 
             # Step 2: create a distribution from the logits (raw outputs) and sample from it
             dist = torch.distributions.Normal(mean, std)
             actions = dist.rsample()
+            actions = actions
             log_probs = dist.log_prob(actions).sum(dim=-1)
 
         elif rl_alg.type == "deterministic":

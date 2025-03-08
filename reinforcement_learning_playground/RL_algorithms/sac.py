@@ -113,8 +113,8 @@ class SAC(nn.Module):
         H = dist.entropy()
         
         q_next = torch.min(q1_next,q2_next)
-        # q_target = rewards.unsqueeze(-1) + (self.gamma*q_next + self.alpha*H.sum(-1).unsqueeze(-1))*not_dones.unsqueeze(-1)
-        q_target = rewards.unsqueeze(-1) + (self.gamma*q_next + self.alpha*H)*not_dones.unsqueeze(-1)
+        q_target = rewards.unsqueeze(-1) + (self.gamma*q_next + self.alpha*H.sum(-1).unsqueeze(-1))*not_dones.unsqueeze(-1)
+        # q_target = rewards.unsqueeze(-1) + (self.gamma*q_next + self.alpha*H)*not_dones.unsqueeze(-1)
 
         # 5) Get q loss
         critic_loss = self.criterion(q1,q_target) + self.criterion(q2,q_target)
@@ -125,7 +125,6 @@ class SAC(nn.Module):
 
         state_action_vec = torch.cat((states, actions), dim=-1)
 
-        policy_loss = - \
-            torch.mean(self.critic_1(state_action_vec) + self.alpha*H)
+        policy_loss = -torch.mean(self.critic_1(state_action_vec) + self.alpha*H)
 
         return critic_loss, policy_loss
