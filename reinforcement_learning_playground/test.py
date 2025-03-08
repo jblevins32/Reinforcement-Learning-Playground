@@ -13,30 +13,32 @@ from create_env import CreateEnv
 from get_action import GetAction
 
 config = GetParams()
+device = torch.device(
+            "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 env,n_obs,n_actions,writer,config = CreateEnv(operation="test")
 
 # Recording video parameters
 num_training_episodes = config['epochs']  # total number of training episodes
-video_dir = os.path.join(root_dir, "videos", config['gym_model_test'], config['rl_alg'])
+video_dir = os.path.join(root_dir, "videos", config['gym_model_test'], config['rl_alg_name'])
 env = RecordVideo(env, video_folder=video_dir, name_prefix=f"testing_{config['test_model_reward']}_reward_{config['test_steps']}_steps",
                     episode_trigger=lambda x: x % config['record_period'] == 0)
 env = RecordEpisodeStatistics(env)
 
 # Choose RL algorithm
-if config['rl_alg'] == "PPO":
+if config['rl_alg_name'] == "PPO":
     rl_alg = PPO_DISC(input_dim=n_obs, output_dim=n_actions, epsilon=config['epsilon'])
-elif config['rl_alg'] == "REINFORCE":
+elif config['rl_alg_name'] == "REINFORCE":
     rl_alg = REINFORCE(input_dim=n_obs, output_dim=n_actions)
-elif config['rl_alg'] == "VPG":
+elif config['rl_alg_name'] == "VPG":
     rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
-elif config['rl_alg'] =="PPO_CONT":
+elif config['rl_alg_name'] =="PPO_CONT":
     rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, lr=config['lr'])
-elif config['rl_alg'] =="SAC":
+elif config['rl_alg_name'] =="SAC":
     rl_alg = SAC(input_dim=n_obs, output_dim=n_actions, lr=config['lr'])
 
 # Load the model parameters
-model_dir = os.path.join(root_dir,"models",f"{config['gym_model_test']}_{config['rl_alg']}_{config['test_model_reward']}.pth")
+model_dir = os.path.join(root_dir,"models",f"{config['gym_model_test']}_{config['rl_alg_name']}_{config['test_model_reward']}.pth")
 rl_alg.load_state_dict(torch.load(model_dir))
 
 # THIS HERE IS FOR MY ENV
@@ -69,9 +71,9 @@ while (count_steps < config['test_steps']):
 # while (done is False) and (count_steps < config['test_steps']):
     count_steps += 1
     with torch.no_grad():
-        action,_,_ = GetAction(rl_alg, torch.Tensor(obs), target=False,grad=False)
+        action,_,_ = GetAction(rl_alg, torch.tensor(obs,device=device).to(torch.float), target=False,grad=False)
 
-    obs, reward, done, truncated, _ = env.step(action.numpy())
+    obs, reward, done, truncated, _ = env.step(action.cpu().numpy())
     env.render()
     print(f'step taken {count_steps}')
     done = done or truncated

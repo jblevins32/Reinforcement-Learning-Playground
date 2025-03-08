@@ -29,3 +29,7 @@ This repo holds my Reinforcement Learning algorithms which are run in gym enviro
 - `README.md`: This is literally you right now...
 - `RL_REQS.md`: RL job listings to drool over
 
+## Install environment:
+- `conda env create -f environment.yaml`
+- `python -m pip install .`
+

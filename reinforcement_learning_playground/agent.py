@@ -4,6 +4,7 @@ from replay_buffer import ReplayBuffer
 from global_dir import root_dir
 import os
 import time
+from datetime import datetime
 import numpy as np
 from torch.distributions import Normal
 from torch.distributions import Categorical
@@ -36,10 +37,12 @@ class Agent():
         self.num_environments = kwargs.get('num_environments', 64)
         self.num_agents = kwargs.get('num_agents', 1)
         self.space = kwargs.get('space', 'CONT')
-        self.rl_alg = kwargs.get('rl_alg', 'PPO_CONT')
+        self.rl_alg_name = kwargs.get('rl_alg', 'PPO_CONT')
         self.epsilon = kwargs.get('epsilon', 0.2)
         self.lr = kwargs.get('lr', 1e-3)
         self.gamma = kwargs.get('gamma', 0.99)
+        self.load_dict = kwargs.get('load_dict', False)
+        self.load_path = kwargs.get('load_path', "0")
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -50,20 +53,24 @@ class Agent():
         self.frames = []
 
         # Choose RL algorithm
-        if self.rl_alg == "PPO_DISC":
+        if self.rl_alg_name == "PPO_DISC":
             self.rl_alg = PPO_DISC(
                 input_dim=n_obs, output_dim=n_actions, epsilon=self.epsilon)
-        elif self.rl_alg == "REINFORCE":
+        elif self.rl_alg_name == "REINFORCE":
             self.rl_alg = REINFORCE(input_dim=n_obs, output_dim=n_actions)
-        elif self.rl_alg == "VPG":
+        elif self.rl_alg_name == "VPG":
             self.rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
-        elif self.rl_alg == "SAC":
-            self.rl_alg = SAC(
-                input_dim=n_obs, output_dim=n_actions, lr=self.lr)
-        elif self.rl_alg == "DDPG":
+        elif self.rl_alg_name == "SAC":
+            self.rl_alg = SAC(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
+        elif self.rl_alg_name == "DDPG":
             self.rl_alg = DDPG(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
-        elif self.rl_alg =="PPO_CONT":
+        elif self.rl_alg_name =="PPO_CONT":
             self.rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
+
+        # Load state dictionary if continuing training
+        if self.load_dict:
+            model_dir = os.path.join(root_dir,"models",f"{self.gym_model}_{self.rl_alg_name}_{self.load_path}.pth") # If starting training is a pretrained model
+            self.rl_alg.load_state_dict(torch.load(model_dir))
 
         # Create traj data or buffer
         if self.rl_alg.on_off_policy == "off":
@@ -113,12 +120,12 @@ class Agent():
             epoch_runtime = time.time()-time_start_epoch
             total_runtime = time.time()-time_start_train
             epoch_runtime_avg = total_runtime/(epoch+1)
-            print(f"Completed epoch {epoch + 1}: Total runtime {np.round(total_runtime/60,3)}/{np.round(self.epochs*epoch_runtime_avg/60,3)} min, Epoch runtime {np.round(epoch_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
+            print(f"Completed epoch {epoch + 1}: Total runtime {np.round(total_runtime/60,3)}/{np.round(self.epochs*epoch_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.epochs*epoch_runtime_avg),4)}% done, Epoch runtime {np.round(epoch_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
 
             # Save the model iteratively, naming based on final reward
             if ((epoch + 1) % self.save_every == 0) and epoch != 0:
                 model_dir = os.path.join(
-                    root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}.pth")
+                    root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.pth")
                 os.makedirs(os.path.join(root_dir, "models"), exist_ok=True)
                 torch.save(self.rl_alg.state_dict(), model_dir)
                 print('Policy saved at', model_dir)

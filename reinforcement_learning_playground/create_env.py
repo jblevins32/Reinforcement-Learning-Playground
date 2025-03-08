@@ -9,7 +9,7 @@ def CreateEnv(operation):
 
     # Tensor board setup
     SetupBoard()
-    writer = create_writer(config['rl_alg'])
+    writer = create_writer(config['rl_alg_name'])
 
     # Create environment
     if operation == "train":

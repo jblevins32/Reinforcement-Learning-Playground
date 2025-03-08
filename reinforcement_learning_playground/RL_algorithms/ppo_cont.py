@@ -64,4 +64,4 @@ class PPO_CONT(nn.Module):
 
         loss = loss_value + loss_policy
 
-        return loss, loss_value
+        return loss, loss_value # Loss value return is just placeholder

@@ -1,18 +1,20 @@
 ############### REGULAR TRAINING/TESTING ###############
 # Training specific parameters
-num_environments: 32
-epochs: 500
-t_steps: 256 # Number of rollouts per epoch
+num_environments: 64
+epochs: 3000
+t_steps: 500 # Number of rollouts per epoch
 save_every: 50 # How many epochs to save the model (or adv_iters for adversarial training)
 discount: 0.99
-lr: .001
-rl_alg: "PPO_CONT"
+lr: .002
+rl_alg_name: "PPO_CONT"
 gym_model_train: "Ant-v5" 
 space: "cont" # disc or cont depending on env
+load_dict: True # Load a model from a dictionary
+load_path: "2.11771" # Load model path
 
 # Testing specific parameters
 gym_model_test: "Ant-v5" 
-test_model_reward: "0.75463" # Final reward of saved model (to differentiate them)
+test_model_reward: "2.11771" # Final reward of saved model (to differentiate them)
 test_steps: 500
 record_period: 1
 
