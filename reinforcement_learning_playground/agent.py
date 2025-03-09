@@ -43,6 +43,7 @@ class Agent():
         self.gamma = kwargs.get('gamma', 0.99)
         self.load_dict = kwargs.get('load_dict', False)
         self.load_path = kwargs.get('load_path', "0")
+        self.adv_iters = kwargs.get('adv_iter', 10)
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -235,6 +236,7 @@ class Agent():
             
             total_reward += reward
 
+        # Average reward for this rollout
         avg_reward = total_reward.mean().item() / self.t_steps
         return avg_reward
 
@@ -253,7 +255,7 @@ class Agent():
         plt.pause(.000001)
 
 ############################# ADVERSARIAL #####################################
-    def train_adv(self, adversary, player):
+    def train_adv(self, adversary, player_identifier):
 
         time_start_train = time.time()
         self.total_reward = 0  # Track total reward for this training run
@@ -269,55 +271,67 @@ class Agent():
 
             # Rollout
             if self.space == "cont":
-                self.rollout_cont_adv(obs, adversary, player)
+                avg_reward = self.rollout_cont_adv(obs, adversary, player_identifier)
             elif self.space == "disc":  # Not implemented for discrete
                 self.rollout_disc(obs)
 
             # Update parameters
-            self.update()
+            policy_loss, critic_loss = self.update()
 
             # Store reward for this epoch: for adervarial plotting
-            self.total_reward += self.traj_data.rewards.mean()
+            self.total_reward += avg_reward
+            reward_to_log = round(avg_reward,5)
+            loss_to_log_policy = -round(policy_loss.item(),5)
+            loss_to_log_critic = -round(critic_loss.item(),5)
 
-            print(f"Completed epoch {epoch + 1}: Total runtime {np.round((time.time()-time_start_train)/60,5)} min, Epoch runtime {np.round(time.time()-time_start_epoch,5)} sec, Reward: {np.round(self.buffer.rewards.mean(),5)}")
+            epoch_runtime = time.time()-time_start_epoch
+            total_runtime = time.time()-time_start_train
+            epoch_runtime_avg = total_runtime/(epoch+1)
+            print(f"Completed epoch {epoch + 1}: Estimated overall runtime {np.round(self.adv_iters*self.epochs*epoch_runtime_avg/60,3)}, Episode runtime {np.round(total_runtime/60,3)}/{np.round(self.epochs*epoch_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.epochs*epoch_runtime_avg),4)}% done, Epoch runtime {np.round(epoch_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
 
-    def rollout_cont_adv(self, obs, adversary, player):
+    def rollout_cont_adv(self, obs, adversary, player_identifier):
+        total_reward = 0
+
         # Rollout for t timesteps
         for t in range(self.t_steps):
 
-            # DEFENDER Step 1: forward pass on the actor and critic to get action and value
-            with torch.no_grad() if self.rl_alg.need_grad == False else torch.enable_grad():
-                mean = self.rl_alg.policy(obs.reshape(
-                    self.num_environments, self.n_obs))
-                std = torch.exp(self.rl_alg.log_std)
+            # PLAYER (Whichever protagonist or adversary is rolling out) Step 1: forward pass on the actor and critic to get action and value
+            actions, log_probs, _ = GetAction(
+                self.rl_alg, obs, target=False, grad=False)
 
-            # Step 2: create a distribution from the logits (raw outputs) and sample from it
-            dist = Normal(mean, std)
-            actions = dist.sample()
-            log_probs = dist.log_prob(actions).sum(dim=-1)
+            # Off player Step 1: forward pass on the actor and critic to get action and value
+            actions_adv, log_probs_adv, _ = GetAction(
+                adversary.rl_alg, obs, target=False, grad=False)
 
-            # ADVERSARY Step 1: forward pass on the actor and critic to get action and value
-            with torch.no_grad() if adversary.need_grad == False else torch.enable_grad():
-                mean_adv = adversary.policy(obs.reshape(
-                    self.num_environments, self.n_obs))
-                std_adv = torch.exp(adversary.log_std)
+            # Step 2: combine actions
+            actions_combined = actions + actions_adv
 
-            # Step 2: create a distribution from the logits (raw outputs) and sample from it
-            dist_adv = Normal(mean_adv, std_adv)
-            actions_adv = dist_adv.sample()
-            log_probs_adv = dist_adv.log_prob(actions_adv).sum(dim=-1)
-
-            # Step 3: take the action in the environment, using the action as a control command to the robot model.
+            # Step 3: take the action in the environment
             obs_new, reward, done, truncated, infos = self.env.step(
-                actions.numpy())
-            obs_new, reward, done, truncated, infos = self.env.step(
-                actions_adv.numpy())
+                actions_combined.cpu().numpy())
             done = done | truncated  # Change done if the episode is truncated
 
             # Make adversary have opposite reward
-            if player == "adversary":
+            if player_identifier == "adversary":
                 reward = -reward
 
-            # Step 4: store data in traj_data
-            self.traj_data.store(t, obs, actions, reward, log_probs, done)
-            obs = torch.tensor(obs_new, device=self.device).to(torch.float)
+             # Store data in traj_data or buffer
+            if self.rl_alg.on_off_policy == "on":
+                self.traj_data.store(t, obs, actions, reward, log_probs, done)
+                reward = torch.tensor(
+                    reward, device=self.device).to(torch.float)                
+                obs = torch.tensor(obs_new, device=self.device).to(torch.float)
+
+            elif self.rl_alg.on_off_policy == "off": # Use a buffer for off policy
+                obs_new = torch.tensor(
+                    obs_new, device=self.device).to(torch.float)   
+                reward = torch.tensor(
+                    reward, device=self.device).to(torch.float)              
+                self.buffer.store(obs, actions, reward*0.01, obs_new, done)
+                obs = obs_new
+            
+            total_reward += reward
+
+        # Average reward for this rollout
+        avg_reward = total_reward.mean().item() / self.t_steps
+        return avg_reward

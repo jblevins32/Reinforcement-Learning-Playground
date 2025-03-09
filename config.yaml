@@ -1,9 +1,9 @@
 ############### REGULAR TRAINING/TESTING ###############
 # Training specific parameters
 num_environments: 64
-epochs: 4000
+epochs: 250 # 4000 - normal, 250 - adversarial
 t_steps: 500 # Number of rollouts per epoch
-save_every: 250 # How many epochs to save the model (or adv_iters for adversarial training)
+save_every: 4 # How many epochs to save the model (or adv_iters for adversarial training)
 discount: 0.99
 lr: .002
 rl_alg_name: "PPO_CONT"
@@ -33,7 +33,7 @@ record_period: 1
 # PPO
 
 ############### Adversarial parameters ###############
-adv_iter: 30
+adv_iter: 20
 
 ############### MY MRPP SIMULATION ###############
 # General
