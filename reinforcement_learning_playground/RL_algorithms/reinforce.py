@@ -20,7 +20,6 @@ class REINFORCE(nn.Module):
 
     def loss_func(self, buffer):
 
-        loss = -torch.sum(buffer.log_probs * buffer.returns) / \
-            (buffer.n_steps*buffer.returns.shape[1])
+        loss = -torch.sum(buffer.log_probs * buffer.returns) / (buffer.n_steps*buffer.returns.shape[1])
 
         return loss

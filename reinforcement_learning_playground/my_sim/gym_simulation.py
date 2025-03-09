@@ -64,7 +64,8 @@ class MRPP_Env(gym.Env):
 
         info = {}
 
-        return obs_flattened_all[np.newaxis], info
+        return obs_regular_justagents, info
+        # return obs_flattened_all[np.newaxis], info # Bring back for learning
     
     def seed(self, seed=None):
         """ Seed the environment and sub-components """
@@ -91,7 +92,8 @@ class MRPP_Env(gym.Env):
         if self.num_environments == 1:
             self.render()
 
-        return obs_flattened_all[np.newaxis], reward, terminated, truncated, info
+        # return obs_flattened_all[np.newaxis], reward, terminated, truncated, info # bring back for learning
+        return obs_regular_justagents, reward, terminated, truncated, info
     
     def render(self):
         return self.map.plot_env()
@@ -314,15 +316,29 @@ class EnvMap():
 
         # Error plot:
         obs, _ = self.get_obs()
-        self.obs_vec = np.append(self.obs_vec, np.linalg.norm(obs[:,:2] - obs[:,2:]))
-        self.ax2.plot(self.obs_vec)
+        obs_errors = np.linalg.norm(obs[:, :2] - obs[:, 2:], axis=-1)  # Shape: (num_agents,)
+        self.obs_vec.append(obs_errors)  # Append new errors
+
+        obs_history = np.array(self.obs_vec)  # Shape: (time_steps, num_agents)
+        time_steps = np.arange(len(obs_history))[:, np.newaxis]  # Shape: (time_steps, 1)
+
+        # Clear previous plot
+        self.ax2.clear()
+
+        # Plot all agent error trajectories in one call
+        self.ax2.plot(time_steps, obs_history)  
+
+        # Set labels and legend
+        self.ax2.set_xlabel('Time Step')
+        self.ax2.set_ylabel('Centralized, Perceived Error')
+        # self.ax2.legend([f'Agent {i+1}' for i in range(self.num_agents)])
 
         # self.fig.legend()
         self.fig.show()
         plt.pause(0.01)
 
         # Save rgb array
-        # self.fig.canvas.draw()
-        # img_array = np.array(self.fig.canvas.renderer.buffer_rgba())
+        self.fig.canvas.draw()
+        img_array = np.array(self.fig.canvas.renderer.buffer_rgba())
 
-        # return img_array
+        return img_array

@@ -37,7 +37,7 @@ class Agent():
         self.num_environments = kwargs.get('num_environments', 64)
         self.num_agents = kwargs.get('num_agents', 1)
         self.space = kwargs.get('space', 'CONT')
-        self.rl_alg_name = kwargs.get('rl_alg', 'PPO_CONT')
+        self.rl_alg_name = kwargs.get('rl_alg_name', 'PPO_CONT')
         self.epsilon = kwargs.get('epsilon', 0.2)
         self.lr = kwargs.get('lr', 1e-3)
         self.gamma = kwargs.get('gamma', 0.99)
@@ -205,18 +205,20 @@ class Agent():
 
     def rollout_cont(self, obs):
         total_reward = 0
+
         # Rollout for t timesteps
         for t in range(self.t_steps):
 
-            actions, log_probs, dist = GetAction(
+            # Get an action from the policy based on the current observation
+            actions, log_probs, _ = GetAction(
                 self.rl_alg, obs, target=False, grad=False)
 
-            # Step 3: take the action in the environment, using the action as a control command to the robot model.
+            # Take the action in the environment
             obs_new, reward, done, truncated, infos = self.env.step(
                 actions.cpu().numpy())
             done = done | truncated  # Change done if the episode is truncated
 
-            # Step 4: store data in traj_data
+            # Store data in traj_data or buffer
             if self.rl_alg.on_off_policy == "on":
                 self.traj_data.store(t, obs, actions, reward, log_probs, done)
                 reward = torch.tensor(

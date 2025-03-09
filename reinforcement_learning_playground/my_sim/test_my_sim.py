@@ -2,17 +2,15 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
+from global_dir import root_dir
 from my_sim.gym_simulation import *
 from gymnasium.utils.env_checker import check_env
 from create_env import CreateEnv
 from research.attack import Attacker
 
-def TestMySim():
+def TestMySim(env, config):
     '''For testing my env!'''
-
-    # Create environment
-    env,_,_,_,config = CreateEnv(operation="test")
-    # check_env(env.unwrapped)
 
     # Reset the env
     obs, _ = env.reset()
@@ -20,30 +18,48 @@ def TestMySim():
     done = False
     control = controller(config['u_clip'])
     attacker = Attacker()
+    map = env.env.env.env.env.env.map
+    step_num = 0
 
     # Testing loop
-    while not done:
+    while not done and step_num < 175:
+        step_num += 1
+        print(step_num)
 
         # get action
         action = control.obstacle_avoid_control(obs, env)
 
-        # test control attack
         if config['test_attack']:
-            action = attacker.action_attack(action)
-            obs_prev = obs.copy()
 
-        # Take step
-        obs, _, done, _, _ = env.step(action)
+            # test control attack
+            if config['test_attack']:
+                action = attacker.action_attack(action)
+                obs_prev = obs.copy()
 
-        # test obs attack
-        if config['test_attack']:
-            obs = attacker.obs_attack(obs, obs_prev)
-            env.env.env.env.map.robot_positions[:,1:] = obs[:,0:2]
+            # Take step
+            obs_attacked, _, done, _, _ = env.step(action)
 
-        env.render()
+            # test obs attack
+            if config['test_attack']:
+                obs_fixed = attacker.obs_attack(obs_attacked, obs_prev)
+            
+            # Render
+            if config['display_attack']:
+                map.robot_positions[:,1:] = obs_attacked[:,0:2] # Show attack happening
+                obs = obs_attacked.copy()
+            else:
+                map.robot_positions[:,1:] = obs_fixed[:,0:2] # set the attacked observations back
+                obs = obs_fixed.copy()
 
-    while done:
-        env.render()
+        else:
+            # Take step
+            obs, _, done, _, _ = env.step(action)
+
+        # env.render()
+
+    # Show the env even after the episode is done
+    # while done:
+        # env.render()
 
     env.close()
 
@@ -58,18 +74,16 @@ class controller():
 
     def obstacle_avoid_control(self, obs, env):
         # Control = distance + agent collisions + obstacle collisions
-        root = env.env.env.env
+        root = env.env.env.env.env.env
         map = root.map
         num_agents = root.num_agents
-        robot_positions = obs
-        env.render()
 
         kp_collisions_agents = 20
         kp_dist = 2
-        kp_collisions_obstacles = 10
+        kp_collisions_obstacles = 20
 
         # Distance control: correct for error of agents away from their goals
-        distance_control = robot_positions[:,2:] - robot_positions[:,0:2]
+        distance_control = map.robot_targets[:,1:] - map.robot_positions[:,1:]
 
         # Collision control: correct for agents being near or on obstacles
         dist_obstacles_radius_r, dir_obstacles = map.check_obstacle_distances("agent")
@@ -95,4 +109,16 @@ class controller():
         return  u.clip(-self.u_clip,self.u_clip) # Returns num_agents x 2 matrix of x and y control commands
 
 if __name__ == "__main__":
-    TestMySim()
+
+    # Create environment
+    env,_,_,_,config = CreateEnv(operation="test")
+    # check_env(env.unwrapped) # Gym env checker
+
+    # Recording video parameters
+    num_training_episodes = config['epochs']  # total number of training episodes
+    video_dir = os.path.join(root_dir, "videos", config['gym_model_test'], "ObstacleAvoidance")
+    env = RecordVideo(env, video_folder=video_dir, name_prefix=f"testing_{config['test_model_reward']}_reward_{config['test_steps']}_steps",
+                        episode_trigger=lambda x: x % config['record_period'] == 0)
+    env = RecordEpisodeStatistics(env)
+
+    TestMySim(env, config)
