@@ -2,13 +2,13 @@ import gymnasium as gym
 from get_params import GetParams
 from tensorboard_setup import *
 
-def CreateEnv(operation):
+def CreateEnv(operation, open_local = False):
 
     # Import args from config.yaml
     config = GetParams()
 
     # Tensor board setup
-    SetupBoard()
+    SetupBoard(open_local=open_local)
     writer = create_writer(config['rl_alg_name'])
 
     # Create environment

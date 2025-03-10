@@ -71,7 +71,7 @@ class Agent():
         # Load state dictionary if continuing training
         if self.load_dict:
             model_dir = os.path.join(root_dir,"models",f"{self.gym_model}_{self.rl_alg_name}_{self.load_path}.pth") # If starting training is a pretrained model
-            self.rl_alg.load_state_dict(torch.load(model_dir))
+            self.rl_alg.load_state_dict(torch.load(model_dir,map_location=self.device))
 
         # Create traj data or buffer
         if self.rl_alg.on_off_policy == "off":

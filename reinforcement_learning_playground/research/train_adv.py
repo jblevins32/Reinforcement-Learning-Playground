@@ -13,7 +13,7 @@ print(torch.version.cuda)
 print(torch.cuda.is_available())
 
 # Create environment
-env,n_obs,n_actions,writer,config = CreateEnv(operation="train")
+env,n_obs,n_actions,writer,config = CreateEnv(operation="train", open_local=True)
 
 # Start Training 
 agent1 = Agent(env,n_obs,n_actions,writer,**config)

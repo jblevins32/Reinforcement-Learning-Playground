@@ -111,7 +111,7 @@ class controller():
 if __name__ == "__main__":
 
     # Create environment
-    env,_,_,_,config = CreateEnv(operation="test")
+    env,_,_,_,config = CreateEnv(operation="test", open_local=False)
     # check_env(env.unwrapped) # Gym env checker
 
     # Recording video parameters
