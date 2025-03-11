@@ -312,7 +312,7 @@ class Agent():
             done = done | truncated  # Change done if the episode is truncated
 
             # Make adversary have opposite reward
-            if player_identifier == "adversary":
+            if player_identifier != "adversary":
                 reward = -reward
 
              # Store data in traj_data or buffer

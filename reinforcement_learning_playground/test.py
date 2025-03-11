@@ -80,7 +80,8 @@ while (count_steps < config['test_steps']):
         action,_,_ = GetAction(rl_alg, torch.tensor(obs,device=device).to(torch.float), target=False,grad=False)
 
     # Attack the action
-    action += torch.randn_like(action) * 1
+    if config['test_attack']:
+        action += torch.randn_like(action) * 1
 
     obs, reward, done, truncated, _ = env.step(action.cpu().numpy())
     total_reward += reward
