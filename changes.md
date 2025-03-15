@@ -10,9 +10,6 @@
 - Create plotting for attacked case
 
 ## General
-- Make continuous algs (DDPG)
-- IMPORTANT Make RARL
-- Fix environment.yaml to work in PACE
 
 ## Papers
 - MADDPG - [Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments](https://arxiv.org/pdf/1706.02275)

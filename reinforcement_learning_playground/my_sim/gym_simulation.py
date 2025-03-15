@@ -33,6 +33,8 @@ class MRPP_Env(gym.Env):
         self.seed_value = kwargs.get("seed_value", None)
         self.num_environments = kwargs.get('num_environments',1)
         self.n_actions = 2
+        self.test_attack = kwargs.get('test_attack', False)
+        self.detect_attack = kwargs.get('detect_attack', False)
         # self.n_obs = 4
         self.n_obs = 4*self.num_agents + 5*3 # 4 observations/robot (location and target location) * number of robots + 5 obsacles * 3 observations/obstacle (location and radius). This is for flattening.
         self.agent_radius = kwargs.get('agent_radius',1.5)
@@ -46,7 +48,7 @@ class MRPP_Env(gym.Env):
         self.observation_space = spaces.Box(low=0,high=np.max(self.map_size), shape=(1,self.n_obs), dtype=float)
 
         # Create the map
-        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.num_environments, self.n_actions, self.agent_radius)
+        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.num_environments, self.n_actions, self.agent_radius, self.test_attack, self.detect_attack)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=self.seed_value)
@@ -99,7 +101,7 @@ class MRPP_Env(gym.Env):
         return self.map.plot_env()
 
 class EnvMap():
-    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, num_environments, n_actions,agent_radius):
+    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, num_environments, n_actions,agent_radius,test_attack, detect_attack):
         self.num_agents = num_agents
         self.map_width = map_size[0]
         self.map_height = map_size[1]
@@ -110,8 +112,10 @@ class EnvMap():
         self.num_environments = num_environments
         self.n_actions = n_actions
         self.agent_radius = agent_radius
-
+        self.test_attack = test_attack
+        self.detect_attack = detect_attack
         self.done_threshold = done_threshold
+        self.attack_flag = False
 
         # # reward weights
         self.w_dist = w_dist
@@ -281,6 +285,9 @@ class EnvMap():
         return reward
     
     def plot_env(self):
+        if self.test_attack and not self.detect_attack:
+            self.fig.suptitle(f"Attack detected: {self.attack_flag}", fontsize=14, fontweight='bold')
+
         # Return the rgb array for the video and also plot the env
         self.ax1.clear()  # Clear previous plot
 

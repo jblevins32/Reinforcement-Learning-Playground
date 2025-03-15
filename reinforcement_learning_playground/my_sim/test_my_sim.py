@@ -8,6 +8,7 @@ from my_sim.gym_simulation import *
 from gymnasium.utils.env_checker import check_env
 from create_env import CreateEnv
 from research.attack import Attacker
+from research.smsf import *
 
 def TestMySim(env, config):
     '''For testing my env!'''
@@ -17,31 +18,32 @@ def TestMySim(env, config):
 
     done = False
     control = controller(config['u_clip'])
-    attacker = Attacker()
     map = env.env.env.env.env.env.map
     step_num = 0
+
+    if config['test_attack']:
+        attacker = Attacker(config['attack_type'])
+        detector = SMSF()
+        discriminator = Discriminator()
 
     # Testing loop
     while not done and step_num < 175:
         step_num += 1
-        print(step_num)
 
         # get action
         action = control.obstacle_avoid_control(obs, env)
 
-        if config['test_attack']:
+        if config['test_attack'] and step_num >= config['attack_delay']:
 
             # test control attack
-            if config['test_attack']:
-                action = attacker.action_attack(action)
-                obs_prev = obs.copy()
+            action = attacker.action_attack(action)
+            obs_prev = obs.copy()
 
             # Take step
             obs_attacked, _, done, _, _ = env.step(action)
 
             # test obs attack
-            if config['test_attack']:
-                obs_fixed = attacker.obs_attack(obs_attacked, obs_prev)
+            obs_fixed = attacker.obs_attack(obs_attacked, obs_prev)
             
             # Render
             if config['display_attack']:
@@ -50,6 +52,20 @@ def TestMySim(env, config):
             else:
                 map.robot_positions[:,1:] = obs_fixed[:,0:2] # set the attacked observations back
                 obs = obs_fixed.copy()
+
+            # Detect attack with SMSF
+            if config['detect_attack']:
+                SMSF_plant = detector.InputToSMSF(obs_attacked)
+                SMSF_received = detector.InputToSMSF(obs)
+                attack_flag = detector.CompareSMSF(SMSF_plant, SMSF_received)
+                print(f"Attack detected: {attack_flag}")
+                map.attack_flag = attack_flag
+
+                predicted_labels = discriminator.Discriminate(SMSF_plant, SMSF_received)
+                true_labels = torch.tensor([0], dtype=torch.long, device=discriminator.device)  # Ensure it's a tensor of indices
+                loss = discriminator.Loss(predicted_labels, true_labels)
+                print(f'discriminator classified correctly? {loss == 0}, loss={loss}')
+                discriminator.Update(loss)
 
         else:
             # Take step

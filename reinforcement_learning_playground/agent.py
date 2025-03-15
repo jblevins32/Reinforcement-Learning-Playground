@@ -168,18 +168,27 @@ class Agent():
 
         # Target updates
         if self.rl_alg.target_updates:
-            for target_param, param in zip(self.rl_alg.critic_1_target.parameters(), self.rl_alg.critic_1.parameters()):
-                target_param.data.copy_(
-                    self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+            if self.rl_alg.name == 'SAC':
+                for target_param, param in zip(self.rl_alg.critic_1_target.parameters(), self.rl_alg.critic_1.parameters()):
+                    target_param.data.copy_(
+                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
 
-            for target_param, param in zip(self.rl_alg.critic_2_target.parameters(), self.rl_alg.critic_2.parameters()):
-                target_param.data.copy_(
-                    self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+                for target_param, param in zip(self.rl_alg.critic_2_target.parameters(), self.rl_alg.critic_2.parameters()):
+                    target_param.data.copy_(
+                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
 
-            for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
-                target_param.data.copy_(
-                    self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+                for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
+                    target_param.data.copy_(
+                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+            
+            elif self.rl_alg_name == 'DDPG':
+                for target_param, param in zip(self.rl_alg.critic_target.parameters(), self.rl_alg.critic.parameters()):
+                    target_param.data.copy_(
+                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
 
+                for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
+                    target_param.data.copy_(
+                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
         return policy_loss, critic_loss
 
     def rollout_disc(self, obs):

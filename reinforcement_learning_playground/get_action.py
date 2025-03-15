@@ -32,8 +32,8 @@ def GetAction(rl_alg, obs, target, grad):
             else:
                 actions = rl_alg.policy(obs)
 
-            if noisy:
-                actions += torch.normal(0, exploration_rate,
+            if rl_alg.noisy:
+                actions += torch.normal(0, rl_alg.exploration_rate,
                                         size=actions.shape)
 
             log_probs = []
