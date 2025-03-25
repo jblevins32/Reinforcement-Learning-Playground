@@ -81,26 +81,38 @@
 
 ### Responsibilities
 
--Design, implement, test, and deploy contact rich manipulation behaviors for humanoid robots
--Develop manipulation strategies and behaviors robust to environmental uncertainty and imperfect state estimation
--Contribute to the software architecture and design of the autonomy stack
--Collaborate with members of the autonomy teams to solve complex cross functional problems
--Engineer high quality software that is well tested, reliable and maintainable
+- Design, implement, test, and deploy contact rich manipulation behaviors for humanoid robots
+- Develop manipulation strategies and behaviors robust to environmental uncertainty and imperfect state estimation
+- Contribute to the software architecture and design of the autonomy stack
+- Collaborate with members of the autonomy teams to solve complex cross functional problems
+- Engineer high quality software that is well tested, reliable and maintainable
 
 ### Requirements
--Experience with reinforcement learning, diffusion models, and learning from demonstration
--Experience leveraging machine learning to improve grasp behaviors and object manipulation
--Industry experience developing and deploying manipulation algorithms on high-DOF robots in real world applications
--Experience with perception and scene understanding especially as it pertains to manipulation behaviors
--Experience using simulation tools such as Isaac Sim / Mojoco / Drake/ gazebo or similar
--MS or Ph.D. in robotics, computer science, or related field or have equivalent industry experience
--Strong robotics fundamentals, including kinematics, dynamics, sensing, control, and motion behaviors
--Strong software experience in modern C++ and Python
--Deep learning frameworks such as PyTorch, TensorFlow, and/or JAX
+- Experience with reinforcement learning, diffusion models, and learning from demonstration
+- Experience leveraging machine learning to improve grasp behaviors and object manipulation
+- Industry experience developing and deploying manipulation algorithms on high-DOF robots in real world applications
+- Experience with perception and scene understanding especially as it pertains to manipulation behaviors
+- Experience using simulation tools such as Isaac Sim / Mojoco / Drake/ gazebo or similar
+- MS or Ph.D. in robotics, computer science, or related field or have equivalent industry experience
+- Strong robotics fundamentals, including kinematics, dynamics, sensing, control, and motion behaviors
+- Strong software experience in modern C++ and Python
+- Deep learning frameworks such as PyTorch, TensorFlow, and/or JAX
 
 ### Bonus Qualifications
--Experience working with humanoid (or similar) robots
--Experience working with multi modal exteroceptive sensors (e.g. force, haptic, tactile, vision)
--Experience in orchestrating a scalable automated testing pipeline for simulation
--Experience in classical robotics motion planning and trajectory optimization algorithms
--Publications in your field (RSS, ICRA, IROS preferred)
+- Experience working with humanoid (or similar) robots
+- Experience working with multi modal exteroceptive sensors (e.g. force, haptic, tactile, vision)
+- Experience in orchestrating a scalable automated testing pipeline for simulation
+- Experience in classical robotics motion planning and trajectory optimization algorithms
+- Publications in your field (RSS, ICRA, IROS preferred)
+
+## ML Research Scientist Apple
+
+### Minimum Qualifications
+- Ph.D. in computer science, engineering, or relevant degree.
+- Experience with generative models, e.g. LLMs, VLMs, VLAs, diffusion models, etc.
+
+### Preferred Qualifications
+- Experience with learning-based robot control policies
+- Experience with robot manipulation
+- Consistent track record of researching, inventing and/or shipping advanced machine learning models
+- Outstanding communication and interpersonal skills with ability to work with cross-functional teams.
