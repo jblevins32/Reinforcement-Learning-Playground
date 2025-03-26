@@ -38,6 +38,8 @@ class MRPP_Env(gym.Env):
         # self.n_obs = 4
         self.n_obs = 4*self.num_agents + 5*3 # 4 observations/robot (location and target location) * number of robots + 5 obsacles * 3 observations/obstacle (location and radius). This is for flattening.
         self.agent_radius = kwargs.get('agent_radius',1.5)
+        self.headless = kwargs.get('headless', False)
+        self.learning = kwargs.get('learning', True)
 
         self.render_mode = render_mode
 
@@ -48,7 +50,7 @@ class MRPP_Env(gym.Env):
         self.observation_space = spaces.Box(low=0,high=np.max(self.map_size), shape=(1,self.n_obs), dtype=float)
 
         # Create the map
-        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.num_environments, self.n_actions, self.agent_radius, self.test_attack, self.detect_attack)
+        self.map = EnvMap(self.num_agents, self.map_size, self.num_obstacles, self.obstacle_radius_max, self.obstacle_cost, self.dt, self.done_threshold,self.w_dist,self.w_coll,self.w_dir,self.w_goal, self.num_environments, self.n_actions, self.agent_radius, self.test_attack, self.detect_attack, self.headless)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=self.seed_value)
@@ -66,8 +68,11 @@ class MRPP_Env(gym.Env):
 
         info = {}
 
-        return obs_regular_justagents, info
-        # return obs_flattened_all[np.newaxis], info # Bring back for learning
+        if self.learning == True:
+            return obs_flattened_all[np.newaxis], info # Bring back for learning
+        else:
+            return obs_regular_justagents, info # Bring back for non-learning, regular control or attack testing
+
     
     def seed(self, seed=None):
         """ Seed the environment and sub-components """
@@ -91,17 +96,19 @@ class MRPP_Env(gym.Env):
         truncated = False
 
         # Render the env during training if using one env
-        if self.num_environments == 1:
+        if self.num_environments == 1 and self.headless == False:
             self.render()
 
-        # return obs_flattened_all[np.newaxis], reward, terminated, truncated, info # bring back for learning
-        return obs_regular_justagents, reward, terminated, truncated, info
+        if self.learning == True:
+            return obs_flattened_all[np.newaxis], reward, terminated, truncated, info # bring back for learning
+        else:
+            return obs_regular_justagents, reward, terminated, truncated, info # Bring back for non-learning, regular control or attack testing
     
     def render(self):
         return self.map.plot_env()
 
 class EnvMap():
-    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, num_environments, n_actions,agent_radius,test_attack, detect_attack):
+    def __init__(self, num_agents, map_size, num_obstacles, obstacle_radius_max, obstacle_cost, dt, done_threshold, w_dist, w_coll, w_dir, w_goal, num_environments, n_actions,agent_radius,test_attack, detect_attack, headless):
         self.num_agents = num_agents
         self.map_width = map_size[0]
         self.map_height = map_size[1]
@@ -116,6 +123,7 @@ class EnvMap():
         self.detect_attack = detect_attack
         self.done_threshold = done_threshold
         self.attack_flag = False
+        self.headless = headless
 
         # # reward weights
         self.w_dist = w_dist
@@ -278,8 +286,10 @@ class EnvMap():
             desired_norm_dir = (self.robot_targets[idx,1:] - self.robot_positions[idx,1:])/np.linalg.norm((self.robot_targets[idx,1:] - self.robot_positions[idx,1:]))
             dir_accuracy += np.dot(desired_norm_dir, control_norm_dir)
 
-        # Reaching goal. Want more.
-        print(f'dist reward: {(- self.w_dist * dist_rmse)}, collision reward: {(- self.w_coll * num_collisions)}, dir reward: {(self.w_dir * dir_accuracy)}, goal reward: {(self.w_goal * self.done)}')
+        # Reaching goal. Want more. Printing rewards here for reward shaping help.
+        if self.headless == False: # Only print rewards if we are not headless
+            print(f'dist reward: {(- self.w_dist * dist_rmse)}, collision reward: {(- self.w_coll * num_collisions)}, dir reward: {(self.w_dir * dir_accuracy)}, goal reward: {(self.w_goal * self.done)}')
+        
         reward = (- self.w_dist * dist_rmse) + (- self.w_coll * num_collisions) + (self.w_dir * dir_accuracy) + (self.w_goal * self.done)
 
         return reward

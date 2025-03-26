@@ -245,7 +245,7 @@ class Agent():
             
             total_reward += reward
 
-        # Average reward for this rollout
+        # Average reward per step for this rollout
         avg_reward = total_reward.mean().item() / self.t_steps
         return avg_reward
 

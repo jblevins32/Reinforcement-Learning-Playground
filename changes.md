@@ -1,3 +1,8 @@
+## Notes for getting MARL to work
+- std is clamped in get_action right now. Double check these bounds are fine.
+- agent targets and obstacle info are all static ... need this in my observation if it isn't changing?
+- Check to be sure rewards are balanced
+
 ## Bugs
 - MRPP_Env pops up 64 windows at start of training
 - MRPP_Env not learning

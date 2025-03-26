@@ -1,19 +1,19 @@
 ############### REGULAR TRAINING/TESTING ###############
 # Training specific parameters
-num_environments: 32
+num_environments: 64
 epochs: 250 # 4000 - normal, 250 - adversarial
-t_steps: 500 # Number of rollouts per epoch
-save_every: 4 # How many epochs to save the model (or adv_iters for adversarial training)
+t_steps: 1000 # Number of rollouts per epoch
+save_every: 50 # How many epochs to save the model (or adv_iters for adversarial training)
 discount: 0.99
 lr: .002
-rl_alg_name: "DDPG"
-gym_model_train: "Ant-v5" 
+rl_alg_name: "PPO_CONT"
+gym_model_train: "MRPP_Env" 
 space: "cont" # disc or cont depending on env
 load_dict: False # Load a model from a dictionary
 load_path: "2.11771" # Load model path
 
 # Testing specific parameters
-gym_model_test: "Ant-v5" 
+gym_model_test: "MRPP_Env" 
 test_model_reward: "2.11771" #"2.11771" # "0.14489_2025-03-10_04-43" # Final reward of saved model (to differentiate them)
 test_steps: 500
 record_period: 1
@@ -52,6 +52,8 @@ w_goal: 1
 done_threshold: 5
 u_clip: 100 # bound the control command to mitigate jerky behavior
 seed_value: 42
+headless: True # False if want to display the simulation and rewards during training. ALSO NEED NUM_ENVS TO BE 1
+learning: True # True if want to train the agents... need to generalize and remove this. This refers to the two return lines in gym_simulation.py
 
 # Decentralized case
 communication_range: 10.0
@@ -60,7 +62,7 @@ centralized: False
 
 # Learning case
 obstacle_cost: 5.0
-max_episode_steps: 350
+max_episode_steps: 1000
 
 # Attack case
 test_attack: True
