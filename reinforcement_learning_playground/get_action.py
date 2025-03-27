@@ -18,7 +18,7 @@ def GetAction(rl_alg, obs, target, grad):
                     mean = rl_alg.policy_target(obs)
                 else: 
                     mean = rl_alg.policy(obs)
-                std = torch.exp(rl_alg.log_std).clamp(0.1,0.4) # Use clamp?
+                std = torch.exp(rl_alg.log_std).clamp(0.05,1) # Use clamp?
 
             # Step 2: create a distribution from the logits (raw outputs) and sample from it
             dist = torch.distributions.Normal(mean, std)

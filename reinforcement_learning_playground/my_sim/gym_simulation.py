@@ -64,8 +64,6 @@ class MRPP_Env(gym.Env):
         # Get initial observation
         obs_regular_justagents, obs_flattened_all = self.map.get_obs()
 
-        # self.render()
-
         info = {}
 
         if self.learning == True:
@@ -193,12 +191,6 @@ class EnvMap():
         collisions = np.sum(dist_obstacles_radius_r_agent < 0) + np.sum(dist_agents_radius_r < 0) + np.sum(dist_obstacles_radius_r_target < 0)
 
         return int(collisions)
-    
-        # Distance formula broadcasting with robots and obstacles
-        dist_mask = np.sqrt((self.obstacle_positions[:,0].reshape(-1,1) - self.robot_positions[:,1].reshape(1,-1))**2 + (self.obstacle_positions[:,1].reshape(-1,1) - self.robot_positions[:,2].reshape(1,-1))**2) < self.obstacle_positions[:,2].reshape(-1,1)
-        collisions = np.sum(dist_mask)
-
-        return collisions
     
     def check_obstacle_distances(self, agent_or_target):
         obs, _ = self.get_obs()

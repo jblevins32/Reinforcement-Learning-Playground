@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 from traj_data import *
 from replay_buffer import ReplayBuffer
 from global_dir import root_dir
@@ -6,7 +5,6 @@ import os
 import time
 from datetime import datetime
 import numpy as np
-from torch.distributions import Normal
 from torch.distributions import Categorical
 from get_action import GetAction
 from RL_algorithms.reinforce import *
@@ -248,20 +246,6 @@ class Agent():
         # Average reward per step for this rollout
         avg_reward = total_reward.mean().item() / self.t_steps
         return avg_reward
-
-    def plot_reward(self, epoch):
-        if self.rl_alg.name == "PPO_ADV":
-            color = "red"
-        else:
-            color = "blue"
-
-        self.epoch_vec.append(epoch)
-        self.reward_vec.append(self.traj_data.rewards.mean())
-        plt.figure('Reward Plot')
-        plt.plot(self.epoch_vec, self.reward_vec, color)
-        plt.xlabel('epoch')
-        plt.ylabel('reward')
-        plt.pause(.000001)
 
 ############################# ADVERSARIAL #####################################
     def train_adv(self, adversary, player_identifier):
