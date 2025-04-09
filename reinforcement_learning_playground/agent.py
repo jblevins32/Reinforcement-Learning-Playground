@@ -27,7 +27,7 @@ class Agent():
         self.n_actions = n_actions
         self.writer = writer
 
-        self.epochs = kwargs.get('epochs', 1000)
+        self.episodes = kwargs.get('episodes', 1000)
         self.discount = kwargs.get('discount', 0.99)
         self.t_steps = kwargs.get('t_steps', 256)
         self.save_every = kwargs.get('save_every', 250)
@@ -45,9 +45,9 @@ class Agent():
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-        # rl_alg,num_environments,epochs,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space, writer
+        # rl_alg,num_environments,episodes,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space, writer
         # Initialize plot variables
-        self.epoch_vec = []
+        self.episode_vec = []
         self.reward_vec = []
         self.frames = []
 
@@ -82,12 +82,12 @@ class Agent():
 
         time_start_train = time.time()
 
-        # Running for n epochs
-        for epoch in range(self.epochs):
+        # Running for n episodes
+        for episode in range(self.episodes):
 
-            time_start_epoch = time.time()
+            time_start_episode = time.time()
 
-            # Reset the environment at beginning of each epoch
+            # Reset the environment at beginning of each episode
             obs, _ = self.env.reset()
             obs = torch.tensor(obs, device=self.device).to(torch.float)
 
@@ -109,20 +109,20 @@ class Agent():
 
             # Update tensorboard and terminal
             self.writer.add_scalars(
-                "reward", {self.rl_alg.name: reward_to_log}, epoch)
+                "reward", {self.rl_alg.name: reward_to_log}, episode)
             self.writer.add_scalars(
-                "loss/policy", {self.rl_alg.name: loss_to_log_policy}, epoch)
+                "loss/policy", {self.rl_alg.name: loss_to_log_policy}, episode)
             self.writer.add_scalars(
-                "loss/critic", {self.rl_alg.name: loss_to_log_critic}, epoch)
+                "loss/critic", {self.rl_alg.name: loss_to_log_critic}, episode)
             self.writer.flush()
 
-            epoch_runtime = time.time()-time_start_epoch
+            episode_runtime = time.time()-time_start_episode
             total_runtime = time.time()-time_start_train
-            epoch_runtime_avg = total_runtime/(epoch+1)
-            print(f"Completed epoch {epoch + 1}: Total runtime {np.round(total_runtime/60,3)}/{np.round(self.epochs*epoch_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.epochs*epoch_runtime_avg),4)}% done, Epoch runtime {np.round(epoch_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
+            episode_runtime_avg = total_runtime/(episode+1)
+            print(f"Completed episode {episode + 1}: Total runtime {np.round(total_runtime/60,3)}/{np.round(self.episodes*episode_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.episodes*episode_runtime_avg),4)}% done, episode runtime {np.round(episode_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
 
             # Save the model iteratively, naming based on final reward
-            if ((epoch + 1) % self.save_every == 0) and epoch != 0:
+            if ((episode + 1) % self.save_every == 0) and episode != 0:
                 model_dir = os.path.join(
                     root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.pth")
                 os.makedirs(os.path.join(root_dir, "models"), exist_ok=True)
@@ -133,7 +133,7 @@ class Agent():
 
         # Updates for on policy
         if self.rl_alg.on_off_policy == "on":
-            # Get total expected return from the rollout in this epoch
+            # Get total expected return from the rollout in this episode
             self.traj_data.calc_returns()
 
             # Update networks
@@ -253,12 +253,12 @@ class Agent():
         time_start_train = time.time()
         self.total_reward = 0  # Track total reward for this training run
 
-        # Running for n epochs
-        for epoch in range(self.epochs):
+        # Running for n episodes
+        for episode in range(self.episodes):
 
-            time_start_epoch = time.time()
+            time_start_episode = time.time()
 
-            # Reset the environment at beginning of each epoch
+            # Reset the environment at beginning of each episode
             obs, _ = self.env.reset()
             obs = torch.tensor(obs, device=self.device).to(torch.float)
 
@@ -271,16 +271,16 @@ class Agent():
             # Update parameters
             policy_loss, critic_loss = self.update()
 
-            # Store reward for this epoch: for adervarial plotting
+            # Store reward for this episode: for adervarial plotting
             self.total_reward += avg_reward
             reward_to_log = round(avg_reward,5)
             loss_to_log_policy = -round(policy_loss.item(),5)
             loss_to_log_critic = -round(critic_loss.item(),5)
 
-            epoch_runtime = time.time()-time_start_epoch
+            episode_runtime = time.time()-time_start_episode
             total_runtime = time.time()-time_start_train
-            epoch_runtime_avg = total_runtime/(epoch+1)
-            print(f"Completed epoch {epoch + 1}: Estimated overall runtime {np.round(self.adv_iters*self.epochs*epoch_runtime_avg/60,3)}, Episode runtime {np.round(total_runtime/60,3)}/{np.round(self.epochs*epoch_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.epochs*epoch_runtime_avg),4)}% done, Epoch runtime {np.round(epoch_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
+            episode_runtime_avg = total_runtime/(episode+1)
+            print(f"Completed episode {episode + 1}: Estimated overall runtime {np.round(self.adv_iters*self.episodes*episode_runtime_avg/60,3)}, Episode runtime {np.round(total_runtime/60,3)}/{np.round(self.episodes*episode_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.episodes*episode_runtime_avg),4)}% done, episode runtime {np.round(episode_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
 
     def rollout_cont_adv(self, obs, adversary, player_identifier):
         total_reward = 0

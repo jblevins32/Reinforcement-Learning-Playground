@@ -52,7 +52,6 @@ class PPO_CONT(nn.Module):
         value = self.critic(traj_data.states)
 
         adv = traj_data.returns - value.squeeze(-1)
-        adv = (adv - adv.mean()) / (adv.std() + 1e-8) # Normalize advantage
 
         loss_value = torch.mean(adv**2)
 
@@ -60,8 +59,7 @@ class PPO_CONT(nn.Module):
 
         r = torch.exp(new_log_probs - traj_data.log_probs)
 
-        loss_policy = - \
-            torch.mean(
+        loss_policy = -torch.mean(
                 torch.min(r*adv, torch.clamp(r, 1-self.epsilon, 1+self.epsilon)*adv))
 
         loss = loss_value + loss_policy

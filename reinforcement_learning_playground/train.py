@@ -3,7 +3,7 @@ from my_sim.gym_simulation import *
 from create_env import CreateEnv
 
 # Create environment
-env, n_obs, n_actions, writer, config = CreateEnv(operation="train", open_local=True)
+env, n_obs, n_actions, writer, config = CreateEnv(operation="test_quad", open_local=True)
 
 # Start Training
 agent = Agent(env, n_obs, n_actions, writer, **config)

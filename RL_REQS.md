@@ -116,3 +116,15 @@
 - Experience with robot manipulation
 - Consistent track record of researching, inventing and/or shipping advanced machine learning models
 - Outstanding communication and interpersonal skills with ability to work with cross-functional teams.
+
+## Internship, AI Engineer, Self-Driving
+
+### Qualifications
+- Demonstrated experience in machine learning frameworks and models such as PyTorch, TensorFlow, GPT, CNNs, and generative models
+- Strong experience with Python and software engineering best practices 
+- Experience with one or more of imitation Learning, reinforcement learning (offline/off-policy), modern neural network architectures (e.g., GPT, diffusion, generative models), or related techniques
+- An “under the hood” knowledge of deep learning: layer details, loss functions, optimization, etc.
+- Prior experience with sparse training techniques, neural network pruning, and generative modeling
+- Experience with training large models on distributed computing
+- Ability to work on complex problems and produce significant research and/or experience deploying production ML models at scale
+- Proven track record of innovations and executions in deep learning, demonstrated with shipping products or first-author publications at leading AI conferences

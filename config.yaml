@@ -1,16 +1,17 @@
 ############### REGULAR TRAINING/TESTING ###############
 # Training specific parameters
 num_environments: 64
-epochs: 1000 # 4000 - normal, 250 - adversarial
-t_steps: 1000 # Number of rollouts per epoch
-save_every: 100 # How many epochs to save the model (or adv_iters for adversarial training)
+episodes: 250 # 4000 - normal, 250 - adversarial
+t_steps: 256 # Number of rollouts per episode
+save_every: 100 # How many episodes to save the model (or adv_iters for adversarial training)
 discount: 0.99
-lr: .002
+lr: .001
 rl_alg_name: "PPO_CONT"
-gym_model_train: "MRPP_Env" 
+gym_model_train: "Ant-v5" 
 space: "cont" # disc or cont depending on env
 load_dict: False # Load a model from a dictionary
 load_path: "2.11771" # Load model path
+operation: "train"
 
 # Testing specific parameters
 gym_model_test: "MRPP_Env" 
