@@ -6,13 +6,15 @@ import time
 from datetime import datetime
 import numpy as np
 from torch.distributions import Categorical
-from get_action import GetAction
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo_disc import *
-from RL_algorithms.ppo_cont import *
+from RL_algorithms.ppo import *
 from RL_algorithms.sac import *
 from RL_algorithms.ddpg import *
+from RL_algorithms.td3 import *
+from gymnasium.spaces import Discrete, Box
+
 
 ############################################################################################################
 
@@ -31,11 +33,10 @@ class Agent():
         self.discount = kwargs.get('discount', 0.99)
         self.t_steps = kwargs.get('t_steps', 256)
         self.save_every = kwargs.get('save_every', 250)
-        self.gym_model = kwargs.get('gym_model_train', 'Ant-v5')
+        self.gym_model = kwargs.get('gym_model', 'Ant-v5')
         self.num_environments = kwargs.get('num_environments', 64)
         self.num_agents = kwargs.get('num_agents', 1)
-        self.space = kwargs.get('space', 'CONT')
-        self.rl_alg_name = kwargs.get('rl_alg_name', 'PPO_CONT')
+        self.rl_alg_name = kwargs.get('rl_alg_name', 'PPO')
         self.epsilon = kwargs.get('epsilon', 0.2)
         self.lr = kwargs.get('lr', 1e-3)
         self.gamma = kwargs.get('gamma', 0.99)
@@ -44,6 +45,11 @@ class Agent():
         self.adv_iters = kwargs.get('adv_iter', 10)
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
+        
+        # Define the space as cont of disc
+        if isinstance(self.env.action_space, Box):
+            self.space = "cont"
+        else: self.space = "disc"
 
         # rl_alg,num_environments,episodes,t_steps,env,n_obs,n_actions,discount, epsilon, lr, save_every, gym_model, num_agents, space, writer
         # Initialize plot variables
@@ -58,17 +64,19 @@ class Agent():
         elif self.rl_alg_name == "REINFORCE":
             self.rl_alg = REINFORCE(input_dim=n_obs, output_dim=n_actions)
         elif self.rl_alg_name == "VPG":
-            self.rl_alg = VPG(input_dim=n_obs, output_dim=n_actions)
+            self.rl_alg = VPG(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
         elif self.rl_alg_name == "SAC":
             self.rl_alg = SAC(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
         elif self.rl_alg_name == "DDPG":
             self.rl_alg = DDPG(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
-        elif self.rl_alg_name =="PPO_CONT":
-            self.rl_alg = PPO_CONT(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
+        elif self.rl_alg_name =="PPO":
+            self.rl_alg = PPO(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
+        elif self.rl_alg_name =="TD3":
+            self.rl_alg = TD3(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
 
         # Load state dictionary if continuing training
         if self.load_dict:
-            model_dir = os.path.join(root_dir,"models",f"{self.gym_model}_{self.rl_alg_name}_{self.load_path}.pth") # If starting training is a pretrained model
+            model_dir = os.path.join(root_dir,"models",self.load_path) # If starting training is a pretrained model
             self.rl_alg.load_state_dict(torch.load(model_dir,map_location=self.device))
 
         # Create traj data or buffer
@@ -97,29 +105,29 @@ class Agent():
             elif self.space == "disc":
                 self.rollout_disc(obs)
 
-            # Update parameters FOR ON POLICY
-            policy_loss, critic_loss = self.update()
-
+            # Update parameters
+            loss_policy, loss_critic = self.update(episode)
+            
             # if self.rl_alg.on_off_policy == "on":
                 # reward_to_log = round(float(self.traj_data.rewards.mean()),5)
 
             reward_to_log = round(avg_reward,5)
-            loss_to_log_policy = -round(policy_loss.item(),5)
-            loss_to_log_critic = -round(critic_loss.item(),5)
+            loss_to_log_policy = round(loss_policy.item(),5)
+            loss_to_log_critic = round(loss_critic.item(),5)
 
             # Update tensorboard and terminal
             self.writer.add_scalars(
-                "reward", {self.rl_alg.name: reward_to_log}, episode)
+                "reward", {self.gym_model + self.rl_alg.name: reward_to_log}, episode)
             self.writer.add_scalars(
-                "loss/policy", {self.rl_alg.name: loss_to_log_policy}, episode)
+                "loss/policy", {self.gym_model + self.rl_alg.name: loss_to_log_policy}, episode)
             self.writer.add_scalars(
-                "loss/critic", {self.rl_alg.name: loss_to_log_critic}, episode)
+                "loss/critic", {self.gym_model + self.rl_alg.name: loss_to_log_critic}, episode)
             self.writer.flush()
 
             episode_runtime = time.time()-time_start_episode
             total_runtime = time.time()-time_start_train
             episode_runtime_avg = total_runtime/(episode+1)
-            print(f"Completed episode {episode + 1}: Total runtime {np.round(total_runtime/60,3)}/{np.round(self.episodes*episode_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.episodes*episode_runtime_avg),4)}% done, episode runtime {np.round(episode_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}")
+            print(f"Completed episode {episode + 1}: Total runtime {np.round(total_runtime/60,3)}/{np.round(self.episodes*episode_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.episodes*episode_runtime_avg),4)}% done, episode runtime {np.round(episode_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}, Critic Loss: {loss_to_log_critic}")
 
             # Save the model iteratively, naming based on final reward
             if ((episode + 1) % self.save_every == 0) and episode != 0:
@@ -129,7 +137,7 @@ class Agent():
                 torch.save(self.rl_alg.state_dict(), model_dir)
                 print('Policy saved at', model_dir)
 
-    def update(self):
+    def update(self, episode):
 
         # Updates for on policy
         if self.rl_alg.on_off_policy == "on":
@@ -137,36 +145,46 @@ class Agent():
             self.traj_data.calc_returns()
 
             # Update networks
-            update_epochs = 10 if (self.rl_alg.name == "PPO_CONT") else 1
+            update_epochs = 10 if (self.rl_alg.name == "PPO") else 1
 
             for _ in range(update_epochs):
-                policy_loss, critic_loss = self.rl_alg.loss_func(self.traj_data)
+                loss_policy, loss_critic = self.rl_alg.loss_func(self.traj_data, self.GetAction)
+                loss_total = loss_policy + loss_critic # This is for PPO and VPG
                 self.rl_alg.policy_optimizer.zero_grad()
-                policy_loss.backward()
+                loss_total.backward()
                 self.rl_alg.policy_optimizer.step()
 
+            # Dump the traj data for this rollout
             self.traj_data.detach()
 
         # Updates for off policy
         elif self.rl_alg.on_off_policy == "off":
 
+            epochs_critic = 64
+            epochs_policy = 4
+
             # Critic update
-            for _ in range(64):
-                critic_loss, _ = self.rl_alg.loss_func(*self.buffer.sample())
+
+            for _ in range(epochs_critic):
+                loss_critic = self.rl_alg.loss_func_critic(*self.buffer.sample(), self.GetAction)
                 self.rl_alg.critic_optimizer.zero_grad()
-                critic_loss.backward()
+                loss_critic.backward()
                 self.rl_alg.critic_optimizer.step()
 
-            # Policy update
-            for _ in range(4):
-                _, policy_loss = self.rl_alg.loss_func(*self.buffer.sample())
-                self.rl_alg.policy_optimizer.zero_grad()
-                policy_loss.backward()
-                self.rl_alg.policy_optimizer.step()
+            # Policy update with a delay if called for (only TD3 thus far)
+            loss_policy = torch.tensor(0)
+            if episode % self.rl_alg.policy_update_delay == 0:
+                for _ in range(epochs_policy):
+                    loss_policy = self.rl_alg.loss_func_policy(*self.buffer.sample(), self.GetAction)
+                    self.rl_alg.policy_optimizer.zero_grad()
+                    loss_policy.backward()
+                    self.rl_alg.policy_optimizer.step()
+        else:
+            raise Exception('On or off policy not defined for this algorithm')
 
         # Target updates
         if self.rl_alg.target_updates:
-            if self.rl_alg.name == 'SAC':
+            if self.rl_alg.name == 'SAC' or self.rl_alg.name == 'TD3':
                 for target_param, param in zip(self.rl_alg.critic_1_target.parameters(), self.rl_alg.critic_1.parameters()):
                     target_param.data.copy_(
                         self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
@@ -174,20 +192,27 @@ class Agent():
                 for target_param, param in zip(self.rl_alg.critic_2_target.parameters(), self.rl_alg.critic_2.parameters()):
                     target_param.data.copy_(
                         self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
-
-                for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
-                    target_param.data.copy_(
-                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+               
+                if episode % self.rl_alg.policy_update_delay == 0:
+                    for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
+                        target_param.data.copy_(
+                            self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
             
             elif self.rl_alg_name == 'DDPG':
                 for target_param, param in zip(self.rl_alg.critic_target.parameters(), self.rl_alg.critic.parameters()):
                     target_param.data.copy_(
                         self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
 
-                for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
-                    target_param.data.copy_(
-                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
-        return policy_loss, critic_loss
+                if episode % self.rl_alg.policy_update_delay == 0:
+                    for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
+                        target_param.data.copy_(
+                            self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+        
+        # Update exploration rate, keeping it above 0.05
+        if self.rl_alg.explore is True:
+            self.rl_alg.exploration_rate  = max(self.rl_alg.exploration_rate  * 0.985, 0.05)
+
+        return loss_policy, loss_critic
 
     def rollout_disc(self, obs):
         # Rollout for t timesteps
@@ -218,8 +243,7 @@ class Agent():
         for t in range(self.t_steps):
 
             # Get an action from the policy based on the current observation
-            actions, log_probs, _ = GetAction(
-                self.rl_alg, obs, target=False, grad=False)
+            actions, log_probs, _ = self.GetAction(obs, target=False, grad = self.rl_alg.need_grad, noisy = self.rl_alg.need_noisy)
 
             # Take the action in the environment
             obs_new, reward, done, truncated, infos = self.env.step(
@@ -228,17 +252,21 @@ class Agent():
 
             # Store data in traj_data or buffer
             if self.rl_alg.on_off_policy == "on":
-                self.traj_data.store(t, obs, actions, reward, log_probs, done)
+
+                # traj data needs numpy not tensors
+                self.traj_data.store(t, obs, actions, reward*0.01, log_probs, done)
                 reward = torch.tensor(
                     reward, device=self.device).to(torch.float)                
                 obs = torch.tensor(obs_new, device=self.device).to(torch.float)
 
             elif self.rl_alg.on_off_policy == "off": # Use a buffer for off policy
+
+                # Buffer needs tensors not numpy
                 obs_new = torch.tensor(
                     obs_new, device=self.device).to(torch.float)   
                 reward = torch.tensor(
                     reward, device=self.device).to(torch.float)              
-                self.buffer.store(obs, actions, reward*0.01, obs_new, done)
+                self.buffer.store(obs, actions, reward, obs_new, done)
                 obs = obs_new
             
             total_reward += reward
@@ -246,6 +274,57 @@ class Agent():
         # Average reward per step for this rollout
         avg_reward = total_reward.mean().item() / self.t_steps
         return avg_reward
+    
+    def GetAction(self, obs, target, grad, noisy=False):
+        # obs = obs.reshape(self.num_environments,self.n_obs)
+
+        with torch.no_grad() if grad == False else torch.enable_grad():
+
+            # Actions are based on deterministic vs stochastic policy
+
+            if self.rl_alg.type == "stochastic":
+                # Step 1: forward pass on the actor and critic to get action and value
+                if self.rl_alg.name == "SAC" or self.rl_alg.name == "VPG":
+                    if target:
+                        mean, log_std = self.rl_alg.policy_target(obs).chunk(2, dim=-1)
+                    else:
+                        mean, log_std = self.rl_alg.policy(obs).chunk(2, dim=-1)
+                    std = torch.exp(log_std).clamp(0.2,2)  # Use clamp?
+                elif self.rl_alg.name == "PPO":
+                    if target:
+                        mean = self.rl_alg.policy_target(obs)
+                    else: 
+                        mean = self.rl_alg.policy(obs)
+                    std = torch.exp(self.rl_alg.log_std)
+
+                # Step 2: create a distribution from the logits (raw outputs) and sample from it
+                dist = torch.distributions.Normal(mean, std)
+                actions = dist.rsample()
+                log_probs = dist.log_prob(actions).clamp(1e-3,10).sum(dim=-1)
+
+            elif self.rl_alg.type == "deterministic":
+
+                # Target policy or regular policy
+                if target:
+                    actions = self.rl_alg.policy_target(obs)
+                else:
+                    actions = self.rl_alg.policy(obs)
+
+                # Log probs and dist are 0 because this is deterministic
+                log_probs = []
+                dist = []
+
+        # Noise for exploration, assigned to specific algorithms now due to misunderstanding
+        if noisy and self.rl_alg.name == "DDPG":
+            actions += torch.normal(0, self.rl_alg.exploration_rate,
+                                            size=actions.shape).to(self.device)
+        elif not noisy and self.rl_alg.name == "SAC":
+            actions = mean
+
+        # Clip actions to the action space of the env
+        actions = actions.clamp(np.min(self.env.action_space.low),np.max(self.env.action_space.high))
+
+        return actions, log_probs, dist
 
 ############################# ADVERSARIAL #####################################
     def train_adv(self, adversary, player_identifier):
@@ -289,12 +368,10 @@ class Agent():
         for t in range(self.t_steps):
 
             # PLAYER (Whichever protagonist or adversary is rolling out) Step 1: forward pass on the actor and critic to get action and value
-            actions, log_probs, _ = GetAction(
-                self.rl_alg, obs, target=False, grad=False)
+            actions, log_probs, _ = self.GetAction(obs, target=False, grad=False)
 
-            # Off player Step 1: forward pass on the actor and critic to get action and value
-            actions_adv, log_probs_adv, _ = GetAction(
-                adversary.rl_alg, obs, target=False, grad=False)
+            # Off player Step 1: forward pass on the actor and critic to get action and value NEED TO SOMEHOW DEFINE THAT THIS IS THE ANTAGONIST
+            actions_adv, log_probs_adv, _ = self.GetAction(obs, target=False, grad=False)
 
             # Step 2: combine actions
             actions_combined = actions + actions_adv

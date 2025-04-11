@@ -1,41 +1,54 @@
 import torch
 import torch.nn as nn
-from torch.distributions import categorical
-
+from torch.optim import Adam
 
 class VPG(nn.Module):
 
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, output_dim, lr):
         super(VPG, self).__init__()
 
-        self.need_grad = True
         self.name = "VPG"
+        self.type = "stochastic"
+        self.on_off_policy = "on"
+        self.target_updates = False
+        self.need_grad = True
+        self.need_noisy = False
+        self.policy_update_delay = 1 # This is no delay, update every episode
+        self.explore = False
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
+        # Learns the mean
         self.policy = nn.Sequential(
             nn.Linear(input_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, output_dim)
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, output_dim*2)
         ).to(self.device)
 
+        # Learns the value
         self.critic = nn.Sequential(
             nn.Linear(input_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, 1),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
         ).to(self.device)
 
-    def loss_func(self, buffer):
+        self.policy_optimizer = Adam(self.parameters(), lr=lr)
 
-        value = self.critic(buffer.states)
+    def loss_func(self, traj_data, GetAction):
+
+        value = self.critic(traj_data.states)
 
         # Get advantage
-        adv = buffer.returns - value.squeeze(-1)
+        adv = traj_data.returns - value.squeeze(-1)
 
         # Losses for each network
         loss_value = torch.mean(adv**2)
-        loss_policy = -torch.mean(buffer.log_probs*adv)
+        loss_policy = -torch.mean(traj_data.log_probs*adv)
 
         loss = loss_value + loss_policy
 
-        return loss
+        return loss_policy, loss_value

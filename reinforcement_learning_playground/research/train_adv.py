@@ -38,11 +38,11 @@ for adv_iter in range(adv_iters):
     if ((adv_iter + 1) % config['save_every'] == 0) and adv_iter != 0:
         os.makedirs(os.path.join(root_dir,"models"), exist_ok=True)
 
-        model_dir = os.path.join(root_dir,"models",f"{config['gym_model_train']}_{agent1.rl_alg.name}_{final_reward}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.pth")
+        model_dir = os.path.join(root_dir,"models",f"{config['gym_model']}_{agent1.rl_alg.name}_{final_reward}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.pth")
         torch.save(agent1.rl_alg.state_dict(),model_dir)
         print('Policy saved at', model_dir)
 
-        model_dir_adv = os.path.join(root_dir,"models",f"{config['gym_model_train']}_{agent2.rl_alg.name}_ADV_{final_reward_adv}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.pth")
+        model_dir_adv = os.path.join(root_dir,"models",f"{config['gym_model']}_{agent2.rl_alg.name}_ADV_{final_reward_adv}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.pth")
         torch.save(agent2.rl_alg.state_dict(),model_dir_adv)
         print('Policy saved at', model_dir_adv)
 

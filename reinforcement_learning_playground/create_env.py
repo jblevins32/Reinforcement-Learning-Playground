@@ -1,43 +1,52 @@
 import gymnasium as gym
 from get_params import GetParams
 from tensorboard_setup import *
+from gymnasium.spaces import Box
 
 def CreateEnv(operation, open_local = False):
 
     # Import args from config.yaml
     config = GetParams()
 
+    # For testing on env specifically in chosen test model
+    gym_model = config['test_model'].split('_')[0]
+    
     # Tensor board setup
     SetupBoard(open_local=open_local)
     writer = create_writer(config['rl_alg_name'])
 
     # Create environment
-    if config['operation'] == "train":
-        if config['gym_model_train'] == "MRPP_Env":
-            env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model_train'], render_mode="rgb_array", **config) for _ in range(config['num_environments'])])
+    if operation == "train":
+        if config['gym_model'] == "MRPP_Env":
+            env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array", **config) for _ in range(config['num_environments'])])
             n_actions = env.action_space.shape[1]*env.action_space.shape[2]
             n_obs = env.observation_space.shape[1]*env.observation_space.shape[2]
         else:
-            if config['space'] == "cont":
-                env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model_train'], render_mode="rgb_array") for _ in range(config['num_environments'])])
+            env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
+                    
+            # Define the space as cont of disc to get the correct actions and obs spaces
+            if isinstance(env.action_space, Box):
+                space = "cont"
+            else: space = "disc"
+
+            if space == "cont":
                 n_actions = env.action_space.shape[1]
                 n_obs = env.observation_space.shape[1]
-            elif config['space'] == "disc":
-                env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model_train'], render_mode="rgb_array") for _ in range(config['num_environments'])])
+            else:
                 n_actions = 2 # 2 for cart-pole
                 n_obs = env.observation_space.shape[1]
             
-    elif config['operation'] == "test":
-        if config['gym_model_test'] == "MRPP_Env":
-            env = gym.make(config['gym_model_test'], render_mode="rgb_array", **config)
+    elif operation == "test":
+        if gym_model == "MRPP_Env":
+            env = gym.make(gym_model, render_mode="rgb_array", **config)
             n_actions = env.action_space.shape[0]*env.action_space.shape[1]
             n_obs = env.observation_space.shape[0]*env.observation_space.shape[1]
         else:
-            env = gym.make(config['gym_model_test'], render_mode="rgb_array")
+            env = gym.make(gym_model, render_mode="rgb_array")
             n_actions = env.action_space.shape[0]
             n_obs = env.observation_space.shape[0]
 
-    elif config['operation'] == "test_quad":
+    elif operation == "test_quad":
         xml = '/home/jblevins32/.cache/robot_descriptions/mujoco_menagerie/unitree_go1/scene.xml'
         env = gym.make(
             'Ant-v5', 

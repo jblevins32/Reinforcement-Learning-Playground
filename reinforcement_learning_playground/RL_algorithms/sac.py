@@ -2,7 +2,6 @@ import torch.nn as nn
 import torch
 import copy
 from torch.optim import Adam
-from get_action import GetAction
 import torch.distributions.normal as Normal
 
 
@@ -48,9 +47,12 @@ class SAC(nn.Module):
         self.on_off_policy = "off"
         self.target_updates = True
         self.need_grad = False
+        self.need_noisy = True
+        self.policy_update_delay = 1 # This is no delay, update every episode
         self.tau = 0.1  # update rate for target policies
         self.alpha = 0.002
         self.gamma = 0.99
+        self.explore = False
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
@@ -78,22 +80,21 @@ class SAC(nn.Module):
             nn.Linear(64, 1)
         ).to(self.device)
 
-        self.critic_1_target = copy.deepcopy(self.critic_1)
-        self.critic_2_target = copy.deepcopy(self.critic_2)
-        self.policy_target = copy.deepcopy(self.policy)
+        self.critic_1_target = copy.deepcopy(self.critic_1).to(self.device)
+        self.critic_2_target = copy.deepcopy(self.critic_2).to(self.device)
+        self.policy_target = copy.deepcopy(self.policy).to(self.device)
 
         self.critic_optimizer = Adam(params=list(self.critic_1.parameters()) + list(self.critic_2.parameters()),lr=lr)
         self.policy_optimizer = Adam(params=self.policy.parameters(),lr=lr)
 
         self.criterion = nn.MSELoss()
 
-    def loss_func(self, states, actions, rewards, next_states, not_dones):
+    def loss_func_critic(self, states, actions, rewards, next_states, not_dones, GetAction):
 
         with torch.no_grad():
 
             # 1) Get next actions from target policy
-            next_actions, _, _ = GetAction(
-                self, next_states, target=True, grad=False)
+            next_actions, _, _ = GetAction(next_states, target=True, grad=False)
 
             # next_actions = self.get_target_action(next_states, noisy=True)
 
@@ -109,7 +110,7 @@ class SAC(nn.Module):
         q2 = self.critic_2(state_action_vec)
 
         # 4) Get target q, starting by getting  entropy H
-        _,_,dist = GetAction(self, next_states, target = False, grad=True)
+        _,_,dist = GetAction(next_states, target = False, grad=True)
         H = dist.entropy()
         
         q_next = torch.min(q1_next,q2_next)
@@ -119,12 +120,17 @@ class SAC(nn.Module):
         # 5) Get q loss
         critic_loss = self.criterion(q1,q_target) + self.criterion(q2,q_target)
 
+
+        return critic_loss
+    
+    def loss_func_policy(self, states, actions, rewards, next_states, not_dones, GetAction):
+        
         # Get policy loss
-        actions, _, dist = GetAction(self, states, target=False, grad=True)
+        actions, _, dist = GetAction(states, target=False, grad=True)
         H = dist.entropy()
 
         state_action_vec = torch.cat((states, actions), dim=-1)
 
         policy_loss = -torch.mean(self.critic_1(state_action_vec) + self.alpha*H)
 
-        return critic_loss, policy_loss
+        return policy_loss
