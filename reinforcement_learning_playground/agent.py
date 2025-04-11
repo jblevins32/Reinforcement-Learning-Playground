@@ -250,6 +250,8 @@ class Agent():
                 actions.cpu().numpy())
             done = done | truncated  # Change done if the episode is truncated
 
+            
+
             # Store data in traj_data or buffer
             if self.rl_alg.on_off_policy == "on":
 
@@ -322,7 +324,7 @@ class Agent():
             actions = mean
 
         # Clip actions to the action space of the env
-        actions = actions.clamp(np.min(self.env.action_space.low),np.max(self.env.action_space.high))
+        # actions = actions.clamp(np.min(self.env.action_space.low),np.max(self.env.action_space.high))
 
         return actions, log_probs, dist
 
