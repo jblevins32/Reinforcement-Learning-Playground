@@ -47,7 +47,8 @@ class SAC(nn.Module):
         self.on_off_policy = "off"
         self.target_updates = True
         self.need_grad = False
-        self.need_noisy = True
+        self.need_noisy = False
+        self.critic_update_delay = 1
         self.policy_update_delay = 1 # This is no delay, update every episode
         self.tau = 0.1  # update rate for target policies
         self.alpha = 0.002
@@ -110,7 +111,7 @@ class SAC(nn.Module):
         q2 = self.critic_2(state_action_vec)
 
         # 4) Get target q, starting by getting  entropy H
-        _,_,dist = GetAction(next_states, target = False, grad=True)
+        _,_,dist = GetAction(next_states, target = False, grad=False)
         H = dist.entropy()
         
         q_next = torch.min(q1_next,q2_next)

@@ -88,6 +88,6 @@ def CreateEnv(operation):
         n_obs = env.observation_space.shape[0]
 
     # Domain randomization
-    env = DomainRandomize(env)
+    # env = DomainRandomize(env)
 
     return env, n_obs, n_actions, writer, config

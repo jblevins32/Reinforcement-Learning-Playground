@@ -7,6 +7,7 @@
 
 # Run in parallel
 python3 train.py --rl_alg PPO &
+python3 train.py --rl_alg SAC &
 python3 train.py --rl_alg DDPG &
 python3 train.py --rl_alg TD3 &
 wait

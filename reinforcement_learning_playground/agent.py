@@ -182,7 +182,7 @@ class Agent():
         # Target updates
         if self.rl_alg.target_updates:
             if self.rl_alg.name == 'SAC' or self.rl_alg.name == 'TD3':
-                if episode % 50 == 0: # Update the critic at some interval for TD3
+                if episode % self.rl_alg.critic_update_delay == 0: # Update the critic at some interval for TD3
                     for target_param, param in zip(self.rl_alg.critic_1_target.parameters(), self.rl_alg.critic_1.parameters()):
                         target_param.data.copy_(
                             self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
@@ -197,7 +197,7 @@ class Agent():
                             self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
             
             elif self.rl_alg_name == 'DDPG':
-                if episode % 50 == 0:
+                if episode % self.rl_alg.critic_update_delay == 0:
                     for target_param, param in zip(self.rl_alg.critic_target.parameters(), self.rl_alg.critic.parameters()):
                         target_param.data.copy_(
                             self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
@@ -288,17 +288,17 @@ class Agent():
                         mean, log_std = self.rl_alg.policy_target(obs).chunk(2, dim=-1)
                     else:
                         mean, log_std = self.rl_alg.policy(obs).chunk(2, dim=-1)
-                    std = torch.exp(log_std).clamp(0.1,0.4)  # Use clamp?
+                    std = torch.exp(log_std)  # Use clamp?
                 elif self.rl_alg.name == "PPO":
                     if target:
                         mean = self.rl_alg.policy_target(obs)
                     else: 
                         mean = self.rl_alg.policy(obs)
-                    std = torch.exp(self.rl_alg.log_std).clamp(0.1,0.8)
+                    std = torch.exp(self.rl_alg.log_std)
 
                 # Step 2: create a distribution from the logits (raw outputs) and sample from it
                 dist = torch.distributions.Normal(mean, std)
-                actions = dist.sample()
+                actions = dist.rsample()
                 log_probs = dist.log_prob(actions).sum(dim=-1)
 
             elif self.rl_alg.type == "deterministic":
@@ -317,8 +317,8 @@ class Agent():
         if noisy and self.rl_alg.name == "DDPG":
             actions += torch.normal(0, self.rl_alg.exploration_rate,
                                             size=actions.shape).to(self.device)
-        elif not noisy and self.rl_alg.name == "SAC":
-            actions = mean
+        # elif not noisy and self.rl_alg.name == "SAC":
+        #     actions = mean
 
         # Clip actions to the action space of the env
         # actions = actions.clamp(np.min(self.env.action_space.low),np.max(self.env.action_space.high))

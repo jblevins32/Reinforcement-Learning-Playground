@@ -14,6 +14,7 @@ class DDPG(nn.Module):
         self.gamma=0.99
         self.need_grad = False
         self.need_noisy = True
+        self.critic_update_delay = 1
         self.policy_update_delay = 1 # This is no delay, update every episode
         self.explore = True
         self.exploration_rate = 1
