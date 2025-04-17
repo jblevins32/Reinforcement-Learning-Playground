@@ -14,7 +14,7 @@ class TD3(nn.Module):
         self.gamma=0.99
         self.need_grad = False
         self.need_noisy = True
-        self.policy_update_delay = 3
+        self.policy_update_delay = 1
         self.explore = True
         self.exploration_rate = 1
         self.device = torch.device(

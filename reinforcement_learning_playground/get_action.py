@@ -23,7 +23,7 @@ def GetAction(rl_alg, obs, target, grad):
             # Step 2: create a distribution from the logits (raw outputs) and sample from it
             dist = torch.distributions.Normal(mean, std)
             actions = dist.rsample()
-            log_probs = dist.log_prob(actions).sum(dim=-1)
+            log_probs = dist.log_prob(actions).clamp(1e-3,10).sum(dim=-1)
 
         elif rl_alg.type == "deterministic":
             if target:

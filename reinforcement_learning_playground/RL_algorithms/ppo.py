@@ -53,12 +53,18 @@ class PPO(nn.Module):
         value = self.critic(traj_data.states)
 
         adv = traj_data.returns - value.squeeze(-1)
+        # print('new')
+        # print(adv.shape)
 
         loss_value = torch.mean(adv**2)
 
+        # Get log probabilities of these actions under the current policy
         new_log_probs = dist.log_prob(traj_data.actions).sum(dim=-1)
+        # print(new_log_probs.shape)
+        # print(traj_data.log_probs.shape)
 
         r = torch.exp(new_log_probs - traj_data.log_probs)
+        # print(r.shape)
 
         loss_policy = -torch.mean(torch.min(r*adv, torch.clamp(r, 1-self.epsilon, 1+self.epsilon)*adv))
 

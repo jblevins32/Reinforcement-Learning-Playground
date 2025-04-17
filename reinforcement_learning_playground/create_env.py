@@ -1,19 +1,31 @@
 import gymnasium as gym
-from get_params import GetParams
+from get_params_args import *
 from tensorboard_setup import *
 from gymnasium.spaces import Box
+from domain_rand import DomainRandomize
 
-def CreateEnv(operation, open_local = False):
+def CreateEnv(operation):
 
-    # Import args from config.yaml
+    # Import args from flags and parameters from config.yaml
     config = GetParams()
+    args = GetArgs()
+
+    # Replace rl_alg with argument choice if there is one
+    if args.rl_alg is not None:
+        config["rl_alg_name"] = args.rl_alg
+
+    # Render the training env if called for in flag
+    if args.render_training:
+        render_mode_env_zero = "human"
+    else:
+        render_mode_env_zero = "rgb_array"
 
     # For testing on env specifically in chosen test model
     gym_model = config['test_model'].split('_')[0]
     
     # Tensor board setup
-    SetupBoard(open_local=open_local)
-    writer = create_writer(config['rl_alg_name'])
+    SetupBoard(config['gym_model'], config['rl_alg_name'],open_local=args.open_local)
+    writer = create_writer(config['gym_model'],config['rl_alg_name'])
 
     # Create environment
     if operation == "train":
@@ -22,7 +34,17 @@ def CreateEnv(operation, open_local = False):
             n_actions = env.action_space.shape[1]*env.action_space.shape[2]
             n_obs = env.observation_space.shape[1]*env.observation_space.shape[2]
         else:
-            env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
+            # Isolate the first env for human rendering in mujoco
+            envs = []
+            for idx in range(config['num_environments']):
+                if idx == 0:
+                    envs.append(lambda: gym.make(config['gym_model'], render_mode=render_mode_env_zero))
+                else:
+                    envs.append(lambda: gym.make(config['gym_model'], render_mode="rgb_array"))
+
+            env = gym.vector.SyncVectorEnv(envs)
+
+            # env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
                     
             # Define the space as cont of disc to get the correct actions and obs spaces
             if isinstance(env.action_space, Box):
@@ -64,5 +86,8 @@ def CreateEnv(operation, open_local = False):
         )
         n_actions = env.action_space.shape[0]
         n_obs = env.observation_space.shape[0]
+
+    # Domain randomization
+    env = DomainRandomize(env)
 
     return env, n_obs, n_actions, writer, config
