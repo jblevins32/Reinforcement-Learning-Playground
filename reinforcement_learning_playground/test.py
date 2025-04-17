@@ -1,7 +1,7 @@
 import torch
 import os
 from global_dir import root_dir
-from reinforcement_learning_playground.get_params_args import GetParams
+from get_params_args import *
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo_disc import *
@@ -12,22 +12,31 @@ from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 from my_sim.gym_simulation import *
 from create_env import CreateEnv
 from agent import Agent
+from get_action import GetAction
 
 config = GetParams()
+args = GetArgs()
+
+# Overwrite model file from args else use params from config
+if args.model is not None:
+    model_file = args.model
+else:
+    model_file = config['test_model']
+
 device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 # Define model directory and parse info from it
-model_dir = os.path.join(root_dir,"models",config['test_model']) 
-gym_model = config['test_model'].split('_')[0]
-rl_alg_name = config['test_model'].split('_')[1]
+model_dir = os.path.join(root_dir,"models",model_file) 
+gym_model = model_file.split('_')[0]
+rl_alg_name = model_file.split('_')[1]
 
-env,n_obs,n_actions,writer,config = CreateEnv(operation="test", open_local=False)
+env,n_obs,n_actions,writer,config = CreateEnv(operation="test")
 
 # Recording video parameters
 num_training_episodes = config['episodes']  # total number of training episodes
 video_dir = os.path.join(root_dir, "videos", gym_model, rl_alg_name)
-env = RecordVideo(env, video_folder=video_dir, name_prefix=f"{config['test_model']}_{config['test_steps']}_steps",
+env = RecordVideo(env, video_folder=video_dir, name_prefix=f"{model_file}_{config['test_steps']}_steps",
                     episode_trigger=lambda x: x % 1 == 0)
 env = RecordEpisodeStatistics(env)
 
@@ -66,18 +75,18 @@ while (count_steps < config['test_steps']):
 # while (done is False) and (count_steps < config['test_steps']):
     count_steps += 1
     with torch.no_grad():
-        action,_,_ = agent.GetAction(torch.tensor(obs,device=device).to(torch.float), target=False,grad=False)
-
+        action,_,_ = GetAction(agent.rl_alg, torch.tensor(obs,device=device).to(torch.float), target=False,grad=False)
+        # print(action)
     # Attack the action
-    if config['test_attack']:
-        action += torch.randn_like(action) * 1
+    # if config['test_attack']:
+    #     action += torch.randn_like(action) * 1
 
     obs, reward, done, truncated, _ = env.step(action.cpu().numpy())
     total_reward += reward
     env.render()
-    print(f'step taken {count_steps}')
+    # print(f'step taken {count_steps}')
     done = done or truncated
 
-print(f'Total Reward: {total_reward}, Video saved to {video_dir}')
+print(f'Total Reward: {total_reward}, Model: {model_file}, Video saved to {video_dir}')
 
 env.close()

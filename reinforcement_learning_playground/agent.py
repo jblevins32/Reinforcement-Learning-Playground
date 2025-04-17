@@ -15,6 +15,7 @@ from RL_algorithms.ddpg import *
 from RL_algorithms.td3 import *
 from gymnasium.spaces import Discrete, Box
 from get_action import GetAction
+from get_params_args import *
 
 
 ############################################################################################################
@@ -86,6 +87,13 @@ class Agent():
         elif self.rl_alg.on_off_policy == "on":
             self.traj_data = TrajData(n_steps=self.t_steps, n_envs=self.num_environments,
                                       n_obs=n_obs, n_actions=n_actions, space=self.space)
+        
+        # For naming the models with their unique env modifications
+        args = GetArgs()
+        if args.alter_plot_name is not None:
+            self.env_modifications = args.alter_plot_name
+        else:
+            self.env_modifications = 'no-mods'
 
     def train(self):
 
@@ -130,7 +138,7 @@ class Agent():
             # Save the model iteratively, naming based on final reward
             if ((episode + 1) % self.save_every == 0) and episode != 0:
                 model_dir = os.path.join(
-                    root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.pth")
+                    root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}_{self.env_modifications}.pth")
                 os.makedirs(os.path.join(root_dir, "models"), exist_ok=True)
                 torch.save(self.rl_alg.state_dict(), model_dir)
                 print('Policy saved at', model_dir)
