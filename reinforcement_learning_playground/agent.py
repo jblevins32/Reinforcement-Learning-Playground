@@ -14,6 +14,7 @@ from RL_algorithms.sac import *
 from RL_algorithms.ddpg import *
 from RL_algorithms.td3 import *
 from gymnasium.spaces import Discrete, Box
+from get_action import GetAction
 
 
 ############################################################################################################
@@ -145,7 +146,7 @@ class Agent():
             update_epochs = 10 if (self.rl_alg.name == "PPO") else 1
 
             for _ in range(update_epochs):
-                loss_policy, loss_critic = self.rl_alg.loss_func(self.traj_data, self.GetAction)
+                loss_policy, loss_critic = self.rl_alg.loss_func(self.traj_data)
                 loss_total = loss_policy + loss_critic # This is for PPO and VPG
                 self.rl_alg.policy_optimizer.zero_grad()
                 loss_total.backward()
@@ -163,7 +164,7 @@ class Agent():
             # Critic update
 
             for _ in range(epochs_critic):
-                loss_critic = self.rl_alg.loss_func_critic(*self.buffer.sample(), self.GetAction)
+                loss_critic = self.rl_alg.loss_func_critic(*self.buffer.sample())
                 self.rl_alg.critic_optimizer.zero_grad()
                 loss_critic.backward()
                 self.rl_alg.critic_optimizer.step()
@@ -172,7 +173,7 @@ class Agent():
             loss_policy = torch.tensor(0)
             if episode % self.rl_alg.policy_update_delay == 0:
                 for _ in range(epochs_policy):
-                    loss_policy = self.rl_alg.loss_func_policy(*self.buffer.sample(), self.GetAction)
+                    loss_policy = self.rl_alg.loss_func_policy(*self.buffer.sample())
                     self.rl_alg.policy_optimizer.zero_grad()
                     loss_policy.backward()
                     self.rl_alg.policy_optimizer.step()
@@ -242,7 +243,7 @@ class Agent():
         for t in range(self.t_steps):
 
             # Get an action from the policy based on the current observation
-            actions, log_probs, _ = self.GetAction(obs, target=False, grad = self.rl_alg.need_grad, noisy = self.rl_alg.need_noisy)
+            actions, log_probs, _ = GetAction(self.rl_alg, obs, target=False, grad = self.rl_alg.need_grad, noisy = self.rl_alg.need_noisy)
 
             # Take the action in the environment
             obs_new, reward, done, truncated, infos = self.env.step(
@@ -253,7 +254,7 @@ class Agent():
             if self.rl_alg.on_off_policy == "on":
 
                 # traj data needs numpy not tensors
-                self.traj_data.store(t, obs, actions, reward*0.01, log_probs, done)
+                self.traj_data.store(t, obs, actions, reward*0.1, log_probs, done)
                 reward = torch.tensor(
                     reward, device=self.device).to(torch.float)                
                 obs = torch.tensor(obs_new, device=self.device).to(torch.float)
@@ -273,57 +274,6 @@ class Agent():
         # Average reward per step for this rollout
         avg_reward = total_reward.mean().item() / self.t_steps
         return avg_reward
-    
-    def GetAction(self, obs, target, grad, noisy=False):
-        # obs = obs.reshape(self.num_environments,self.n_obs)
-
-        with torch.no_grad() if grad == False else torch.enable_grad():
-
-            # Actions are based on deterministic vs stochastic policy
-
-            if self.rl_alg.type == "stochastic":
-                # Step 1: forward pass on the actor and critic to get action and value
-                if self.rl_alg.name == "SAC" or self.rl_alg.name == "VPG":
-                    if target:
-                        mean, log_std = self.rl_alg.policy_target(obs).chunk(2, dim=-1)
-                    else:
-                        mean, log_std = self.rl_alg.policy(obs).chunk(2, dim=-1)
-                    std = torch.exp(log_std)  # Use clamp?
-                elif self.rl_alg.name == "PPO":
-                    if target:
-                        mean = self.rl_alg.policy_target(obs)
-                    else: 
-                        mean = self.rl_alg.policy(obs)
-                    std = torch.exp(self.rl_alg.log_std)
-
-                # Step 2: create a distribution from the logits (raw outputs) and sample from it
-                dist = torch.distributions.Normal(mean, std)
-                actions = dist.rsample()
-                log_probs = dist.log_prob(actions).sum(dim=-1)
-
-            elif self.rl_alg.type == "deterministic":
-
-                # Target policy or regular policy
-                if target:
-                    actions = self.rl_alg.policy_target(obs)
-                else:
-                    actions = self.rl_alg.policy(obs)
-
-                # Log probs and dist are 0 because this is deterministic
-                log_probs = []
-                dist = []
-
-        # Noise for exploration, assigned to specific algorithms now due to misunderstanding
-        if noisy and self.rl_alg.name == "DDPG":
-            actions += torch.normal(0, self.rl_alg.exploration_rate,
-                                            size=actions.shape).to(self.device)
-        # elif not noisy and self.rl_alg.name == "SAC":
-        #     actions = mean
-
-        # Clip actions to the action space of the env
-        # actions = actions.clamp(np.min(self.env.action_space.low),np.max(self.env.action_space.high))
-
-        return actions, log_probs, dist
 
 ############################# ADVERSARIAL #####################################
     def train_adv(self, adversary, player_identifier):
@@ -367,10 +317,10 @@ class Agent():
         for t in range(self.t_steps):
 
             # PLAYER (Whichever protagonist or adversary is rolling out) Step 1: forward pass on the actor and critic to get action and value
-            actions, log_probs, _ = self.GetAction(obs, target=False, grad=False)
+            actions, log_probs, _ = GetAction(obs, target=False, grad=False)
 
             # Off player Step 1: forward pass on the actor and critic to get action and value NEED TO SOMEHOW DEFINE THAT THIS IS THE ANTAGONIST
-            actions_adv, log_probs_adv, _ = self.GetAction(obs, target=False, grad=False)
+            actions_adv, log_probs_adv, _ = GetAction(obs, target=False, grad=False)
 
             # Step 2: combine actions
             actions_combined = actions + actions_adv

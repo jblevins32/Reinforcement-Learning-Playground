@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 import copy
+from get_action import GetAction
 
 class DDPG(nn.Module):
     def __init__(self, input_dim, output_dim, lr):
@@ -45,13 +46,13 @@ class DDPG(nn.Module):
         
         self.criterion = nn.MSELoss()
 
-    def loss_func_critic(self, states, actions, rewards, next_states, not_dones, GetAction):
+    def loss_func_critic(self, states, actions, rewards, next_states, not_dones):
 
         # Get the target critic loss based on the next state and action for the bellman eqn
         with torch.no_grad():
 
             # 1) Get next actions from target policy
-            next_actions,_,_ = GetAction(next_states, target=True,grad=False)
+            next_actions,_,_ = GetAction(self,next_states, target=True,grad=False)
 
             # 2) Get target value from next states and next actions
             next_state_action_vec = torch.cat(
@@ -70,9 +71,9 @@ class DDPG(nn.Module):
 
         return loss_critic
 
-    def loss_func_policy(self, states, actions, rewards, next_states, not_dones, GetAction):
+    def loss_func_policy(self, states, actions, rewards, next_states, not_dones):
         # 6) Get policy loss
-        actions,_,_ = GetAction(states, target=False,grad=True)
+        actions,_,_ = GetAction(self,states, target=False,grad=True)
         state_action_vec = torch.cat((states, actions), dim=-1)
         loss_policy = -torch.mean(self.critic(state_action_vec))
 

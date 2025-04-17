@@ -3,6 +3,7 @@ import torch
 import copy
 from torch.optim import Adam
 import torch.distributions.normal as Normal
+from get_action import GetAction
 
 
 class SAC(nn.Module):
@@ -90,12 +91,12 @@ class SAC(nn.Module):
 
         self.criterion = nn.MSELoss()
 
-    def loss_func_critic(self, states, actions, rewards, next_states, not_dones, GetAction):
+    def loss_func_critic(self, states, actions, rewards, next_states, not_dones):
 
         with torch.no_grad():
 
             # 1) Get next actions from target policy
-            next_actions, _, _ = GetAction(next_states, target=True, grad=False)
+            next_actions, _, _ = GetAction(self, next_states, target=True, grad=False)
 
             # next_actions = self.get_target_action(next_states, noisy=True)
 
@@ -111,7 +112,7 @@ class SAC(nn.Module):
         q2 = self.critic_2(state_action_vec)
 
         # 4) Get target q, starting by getting  entropy H
-        _,_,dist = GetAction(next_states, target = False, grad=False)
+        _,_,dist = GetAction(self,next_states, target = False, grad=False)
         H = dist.entropy()
         
         q_next = torch.min(q1_next,q2_next)
@@ -124,10 +125,10 @@ class SAC(nn.Module):
 
         return critic_loss
     
-    def loss_func_policy(self, states, actions, rewards, next_states, not_dones, GetAction):
+    def loss_func_policy(self, states, actions, rewards, next_states, not_dones):
         
         # Get policy loss
-        actions, _, dist = GetAction(states, target=False, grad=True)
+        actions, _, dist = GetAction(self, states, target=False, grad=True)
         H = dist.entropy()
 
         state_action_vec = torch.cat((states, actions), dim=-1)

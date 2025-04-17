@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 from torch.optim import Adam
+from get_action import GetAction
 
 class PPO(nn.Module):
     '''
@@ -46,28 +47,21 @@ class PPO(nn.Module):
 
         self.policy_optimizer = Adam(self.parameters(), lr=lr)
 
-    def loss_func(self, traj_data, GetAction):
+    def loss_func(self, traj_data):
 
-        _, _, dist = GetAction(traj_data.states, target=False, grad=True)
+        _, _, dist = GetAction(self, traj_data.states, target=False, grad=True)
 
         value = self.critic(traj_data.states)
 
         adv = traj_data.returns - value.squeeze(-1)
-        # print('new')
-        # print(adv.shape)
 
         loss_value = torch.mean(adv**2)
 
         # Get log probabilities of these actions under the current policy
         new_log_probs = dist.log_prob(traj_data.actions).sum(dim=-1)
-        # print(new_log_probs.shape)
-        # print(traj_data.log_probs.shape)
 
         r = torch.exp(new_log_probs - traj_data.log_probs)
-        # print(r.shape)
 
         loss_policy = -torch.mean(torch.min(r*adv, torch.clamp(r, 1-self.epsilon, 1+self.epsilon)*adv))
 
-        loss = loss_value + loss_policy
-
-        return loss_policy, loss_value # Loss value return is just placeholder
+        return loss_policy, loss_value
