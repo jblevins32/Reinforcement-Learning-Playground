@@ -116,12 +116,9 @@ class Agent():
             loss_to_log_critic = round(loss_critic.item(),5)
 
             # Update tensorboard and terminal
-            self.writer.add_scalars(
-                "reward", {self.gym_model + self.rl_alg.name: reward_to_log}, episode)
-            self.writer.add_scalars(
-                "loss/policy", {self.gym_model + self.rl_alg.name: loss_to_log_policy}, episode)
-            self.writer.add_scalars(
-                "loss/critic", {self.gym_model + self.rl_alg.name: loss_to_log_critic}, episode)
+            self.writer.add_scalar("reward", reward_to_log, episode)
+            self.writer.add_scalar("loss/policy", loss_to_log_policy, episode)
+            self.writer.add_scalar("loss/critic", loss_to_log_critic, episode)
             self.writer.flush()
 
             episode_runtime = time.time()-time_start_episode
@@ -185,23 +182,25 @@ class Agent():
         # Target updates
         if self.rl_alg.target_updates:
             if self.rl_alg.name == 'SAC' or self.rl_alg.name == 'TD3':
-                for target_param, param in zip(self.rl_alg.critic_1_target.parameters(), self.rl_alg.critic_1.parameters()):
-                    target_param.data.copy_(
-                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+                if episode % 50 == 0: # Update the critic at some interval for TD3
+                    for target_param, param in zip(self.rl_alg.critic_1_target.parameters(), self.rl_alg.critic_1.parameters()):
+                        target_param.data.copy_(
+                            self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
 
-                for target_param, param in zip(self.rl_alg.critic_2_target.parameters(), self.rl_alg.critic_2.parameters()):
-                    target_param.data.copy_(
-                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
-               
+                    for target_param, param in zip(self.rl_alg.critic_2_target.parameters(), self.rl_alg.critic_2.parameters()):
+                        target_param.data.copy_(
+                            self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+                
                 if episode % self.rl_alg.policy_update_delay == 0:
                     for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
                         target_param.data.copy_(
                             self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
             
             elif self.rl_alg_name == 'DDPG':
-                for target_param, param in zip(self.rl_alg.critic_target.parameters(), self.rl_alg.critic.parameters()):
-                    target_param.data.copy_(
-                        self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
+                if episode % 50 == 0:
+                    for target_param, param in zip(self.rl_alg.critic_target.parameters(), self.rl_alg.critic.parameters()):
+                        target_param.data.copy_(
+                            self.rl_alg.tau * param.data + (1 - self.rl_alg.tau) * target_param.data)
 
                 if episode % self.rl_alg.policy_update_delay == 0:
                     for target_param, param in zip(self.rl_alg.policy_target.parameters(), self.rl_alg.policy.parameters()):
@@ -249,8 +248,6 @@ class Agent():
             obs_new, reward, done, truncated, infos = self.env.step(
                 actions.cpu().numpy())
             done = done | truncated  # Change done if the episode is truncated
-
-            
 
             # Store data in traj_data or buffer
             if self.rl_alg.on_off_policy == "on":
@@ -301,7 +298,7 @@ class Agent():
 
                 # Step 2: create a distribution from the logits (raw outputs) and sample from it
                 dist = torch.distributions.Normal(mean, std)
-                actions = dist.rsample()
+                actions = dist.sample()
                 log_probs = dist.log_prob(actions).clamp(1e-3,10).sum(dim=-1)
 
             elif self.rl_alg.type == "deterministic":

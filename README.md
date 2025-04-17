@@ -39,5 +39,8 @@ This repo holds my Reinforcement Learning algorithms which are run in gym enviro
 
 ## Train Model:
 - Set parameters of choice in `config.yaml`
-- `python3 train.py`
+- `python3 train.py` with possible arguments
+    - `--rl_alg <rl alg name>`: Run a different choice of RL algorithm
+    - `--open_local`: Open tensorboard, if this is not present, default is not open
+
 

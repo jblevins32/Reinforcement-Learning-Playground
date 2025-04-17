@@ -1,7 +1,7 @@
 import torch
 import os
 from global_dir import root_dir
-from get_params import GetParams
+from reinforcement_learning_playground.get_params_args import GetParams
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo_disc import *
