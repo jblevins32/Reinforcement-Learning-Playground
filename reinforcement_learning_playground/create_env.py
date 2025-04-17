@@ -20,12 +20,19 @@ def CreateEnv(operation):
     else:
         render_mode_env_zero = "rgb_array"
 
+    if args.alter_gravity is not None:
+        alter_gravity = args.alter_gravity
+    else: alter_gravity = 1
+
+    if args.alter_plot_name is not None:
+        alter_plot_name = args.alter_plot_name
+
     # For testing on env specifically in chosen test model
     gym_model = config['test_model'].split('_')[0]
     
     # Tensor board setup
     SetupBoard(config['gym_model'], config['rl_alg_name'],open_local=args.open_local)
-    writer = create_writer(config['gym_model'],config['rl_alg_name'])
+    writer = create_writer(config['gym_model'],config['rl_alg_name'], alter_plot_name)
 
     # Create environment
     if operation == "train":
@@ -88,6 +95,6 @@ def CreateEnv(operation):
         n_obs = env.observation_space.shape[0]
 
     # Domain randomization
-    # env = DomainRandomize(env)
+    env = DomainRandomize(env, alter_gravity)
 
     return env, n_obs, n_actions, writer, config

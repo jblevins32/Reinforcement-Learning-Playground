@@ -14,6 +14,9 @@ def SetupBoard(env_name, alg_name, port=6009, open_local = False):
         webbrowser.open(f"http://localhost:{port}")
 
 # Create a writer for a specific algorithm (can be called multiple times)
-def create_writer(env_name, rl_alg_name):
-    log_dir = os.path.join(root_dir, "tensorboard", env_name, rl_alg_name)
+def create_writer(env_name, rl_alg_name, alter_plot_name):
+    if alter_plot_name is not None:
+        log_dir = os.path.join(root_dir, "tensorboard", env_name, rl_alg_name, alter_plot_name)
+    else:
+        log_dir = os.path.join(root_dir, "tensorboard", env_name, rl_alg_name)
     return SummaryWriter(log_dir=log_dir, comment=f"_{rl_alg_name}")

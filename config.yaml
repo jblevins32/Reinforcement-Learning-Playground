@@ -6,7 +6,7 @@ t_steps: 256 # Number of rollouts per episode
 save_every: 1000 # How many episodes to save the model (or adv_iters for adversarial training)
 discount: 0.99
 lr: .003
-rl_alg_name: "PPO"
+rl_alg_name: "DDPG"
 gym_model: "Ant-v5" 
 load_dict: False # Load a model from a dictionary
 load_path: "InvertedPendulum-v5_DDPG_0.984_2025-04-10_16-14.pth" # Load model path
