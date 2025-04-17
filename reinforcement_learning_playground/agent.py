@@ -288,18 +288,18 @@ class Agent():
                         mean, log_std = self.rl_alg.policy_target(obs).chunk(2, dim=-1)
                     else:
                         mean, log_std = self.rl_alg.policy(obs).chunk(2, dim=-1)
-                    std = torch.exp(log_std).clamp(0.2,2)  # Use clamp?
+                    std = torch.exp(log_std).clamp(0.1,0.4)  # Use clamp?
                 elif self.rl_alg.name == "PPO":
                     if target:
                         mean = self.rl_alg.policy_target(obs)
                     else: 
                         mean = self.rl_alg.policy(obs)
-                    std = torch.exp(self.rl_alg.log_std)
+                    std = torch.exp(self.rl_alg.log_std).clamp(0.1,0.4)
 
                 # Step 2: create a distribution from the logits (raw outputs) and sample from it
                 dist = torch.distributions.Normal(mean, std)
                 actions = dist.sample()
-                log_probs = dist.log_prob(actions).clamp(1e-3,10).sum(dim=-1)
+                log_probs = dist.log_prob(actions).sum(dim=-1)
 
             elif self.rl_alg.type == "deterministic":
 

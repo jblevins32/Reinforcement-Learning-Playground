@@ -17,7 +17,9 @@ def GetArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument('--rl_alg', type=str, default=None, help="Replace the config RL alg with your choice")
     parser.add_argument('--open_local', action='store_true', help="Open Tensorboard before training")
+    parser.add_argument('--render_training', action='store_true', help="Open MuJoCo sim for viewing training in one env in real time")
     parser.set_defaults(open_local=False)
+    parser.set_defaults(render_training=False)
 
     args = parser.parse_args()
 

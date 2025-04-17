@@ -1,13 +1,13 @@
 ############### REGULAR TRAINING/TESTING ###############
 # Training specific parameters
-num_environments: 32
-episodes: 100 # 4000 - normal, 250 - adversarial
-t_steps: 100 # Number of rollouts per episode
+num_environments: 64
+episodes: 3000 # 4000 - normal, 250 - adversarial
+t_steps: 500 # Number of rollouts per episode
 save_every: 1000 # How many episodes to save the model (or adv_iters for adversarial training)
 discount: 0.99
-lr: .0003
-rl_alg_name: "PPO"
-gym_model: "Ant-v5" 
+lr: .002
+rl_alg_name: "DDPG"
+gym_model: "InvertedPendulum-v5" 
 load_dict: False # Load a model from a dictionary
 load_path: "InvertedPendulum-v5_DDPG_0.984_2025-04-10_16-14.pth" # Load model path
 
