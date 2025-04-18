@@ -24,6 +24,10 @@ def CreateEnv(operation):
         alter_gravity = args.alter_gravity
     else: alter_gravity = 1
 
+    if args.alter_friction is not None:
+        alter_friction = args.alter_friction
+    else: alter_friction = 1
+
     alter_plot_name = args.alter_plot_name
 
     # For testing on env specifically in chosen test model
@@ -67,7 +71,7 @@ def CreateEnv(operation):
 
         
         # Domain randomization
-        env = DomainRandomize(env, alter_gravity)
+        env = DomainRandomize(env, alter_gravity, alter_friction)
             
     elif operation == "test":
         if gym_model == "MRPP_Env":

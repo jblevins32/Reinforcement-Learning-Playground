@@ -1,11 +1,11 @@
 ############### REGULAR TRAINING/TESTING ###############
 # Training specific parameters
-num_environments: 32
-episodes: 500 # 4000 - normal, 250 - adversarial
-t_steps: 256 # Number of rollouts per episode
+num_environments: 48
+episodes: 5000 # 4000 - normal, 250 - adversarial
+t_steps: 500 # Number of rollouts per episode
 save_every: 10 # How many episodes to save the model (or adv_iters for adversarial training)
 discount: 0.99
-lr: .003
+lr: .0003
 rl_alg_name: "DDPG"
 gym_model: "Ant-v5" 
 load_dict: False # Load a model from a dictionary

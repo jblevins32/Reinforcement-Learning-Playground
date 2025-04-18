@@ -19,6 +19,7 @@ def GetArgs():
     parser.add_argument('--open_local', action='store_true', help="Open Tensorboard before training")
     parser.add_argument('--render_training', action='store_true', help="Open MuJoCo sim for viewing training in one env in real time")
     parser.add_argument('--alter_gravity', type=float, default=None, help="Set a gravity value for domain randomization")
+    parser.add_argument('--alter_friction', type=float, default=None, help="Set a friction value for domain randomization")
     parser.add_argument('--alter_plot_name', type=str, default=None, help="Set a unique name for this plot in tensorboard")
     parser.add_argument('--model', type=str, default=None, help="Set a model to use for training")
     parser.set_defaults(open_local=False)
