@@ -1,4 +1,5 @@
 import numpy as np
+import mujoco as mj
 
 def DomainRandomize(env, alter_gravity, alter_friction):
 
@@ -21,5 +22,17 @@ def DomainRandomize(env, alter_gravity, alter_friction):
         # env.envs[idx].unwrapped.model.body_mass[:] *= 1.1
 
         # Set changes
+
+    return env
+
+def Randomdisturbs(env, disturb_limit):
+
+    body_name = "torso"
+    body_id = mj.mj_name2id(env.envs[0].unwrapped.model, mj.mjtObj.mjOBJ_BODY, body_name) # This gets the mujoco ID of the body chosen above
+    
+    for idx, _ in enumerate(env.envs):
+
+        random_force = np.random.uniform(-disturb_limit, disturb_limit, size=6)
+        env.envs[idx].unwrapped.data.xfrc_applied[body_id, :] = random_force # first 3 cols of each body are forces and the last 3 are torques
 
     return env

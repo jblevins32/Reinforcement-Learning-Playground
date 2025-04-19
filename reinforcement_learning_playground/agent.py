@@ -16,6 +16,9 @@ from RL_algorithms.td3 import *
 from gymnasium.spaces import Discrete, Box
 from get_action import GetAction
 from get_params_args import *
+from domain_rand import Randomdisturbs
+import warnings
+
 
 
 ############################################################################################################
@@ -95,6 +98,22 @@ class Agent():
         else:
             self.env_modifications = 'no-mods'
 
+        # Add disturbs to the model for domain randomization
+        args = GetArgs()
+        if args.disturb_limit is not None:
+            self.disturb_limit = args.disturb_limit
+        else: 
+            self.disturb_limit = 0
+            if args.disturb_rate is not None:
+                warnings.warn("disturb rate chosen, but no disturb limit. No disturb will be applied.")
+        if args.disturb_rate is not None:
+            self.disturb_rate = args.disturb_rate
+        else:
+            self.disturb_rate = 0
+            if args.disturb_limit is not None:
+                warnings.warn("disturb limit chosen, but no disturb rate. No disturb will be applied.")
+
+
     def train(self):
 
         time_start_train = time.time()
@@ -117,9 +136,6 @@ class Agent():
             # Update parameters
             loss_policy, loss_critic = self.update(episode)
             
-            # if self.rl_alg.on_off_policy == "on":
-                # reward_to_log = round(float(self.traj_data.rewards.mean()),5)
-
             reward_to_log = round(avg_reward,5)
             loss_to_log_policy = round(loss_policy.item(),5)
             loss_to_log_critic = round(loss_critic.item(),5)
@@ -143,6 +159,74 @@ class Agent():
                 torch.save(self.rl_alg.state_dict(), model_dir)
                 print('Policy saved at', model_dir)
 
+    def rollout_disc(self, obs):
+        # Rollout for t timesteps
+        for t in range(self.t_steps):
+
+            # Step 1: forward pass on the actor and critic to get action and value
+            with torch.no_grad() if self.rl_alg.need_grad == False else torch.enable_grad():
+                logits = self.rl_alg.policy(obs)
+
+            # Step 2: create a distribution from the logits (raw outputs) and sample from it
+            probs = Categorical(logits=logits)
+            actions = probs.sample()
+            log_probs = probs.log_prob(actions)
+
+            # Step 3: take the action in the environment, using the action as a control command to the robot model.
+            obs_new, reward, done, truncated, infos = self.env.step(
+                actions.numpy())
+            done = done | truncated  # Change done if the episode is truncated
+
+            # Step 4: store data in traj_data
+            self.traj_data.store(t, obs, actions, reward, log_probs, done)
+            obs = torch.tensor(obs_new, device=self.device).to(torch.float)
+
+    def rollout_cont(self, obs):
+        total_reward = 0
+
+        # Create vector of disturb times to perturb the agent in the rollout
+        t_disturbed = np.random.uniform(0,1,size=self.t_steps) < self.disturb_rate
+
+        # Rollout for t timesteps
+        for t in range(self.t_steps):
+
+            # Get an action from the policy based on the current observation
+            actions, log_probs, _ = GetAction(self.rl_alg, obs, target=False, grad = self.rl_alg.need_grad, noisy = self.rl_alg.need_noisy)
+
+            # Domain randomization for disturb forces at specific intervals and random magnitudes. Will not happen unless flag is used
+            if t_disturbed[t]:
+                self.env = Randomdisturbs(self.env, self.disturb_limit)
+
+            # Take the action in the environment
+            obs_new, reward, done, truncated, infos = self.env.step(
+                actions.cpu().numpy())
+            done = done | truncated  # Change done if the episode is truncated
+
+            # Store data in traj_data or buffer
+            if self.rl_alg.on_off_policy == "on":
+
+                # traj data needs numpy not tensors
+                self.traj_data.store(t, obs, actions, reward*0.1, log_probs, done)
+                reward = torch.tensor(
+                    reward, device=self.device).to(torch.float)                
+                obs = torch.tensor(obs_new, device=self.device).to(torch.float)
+
+            elif self.rl_alg.on_off_policy == "off": # Use a buffer for off policy
+
+                # Buffer needs tensors not numpy
+                obs_new = torch.tensor(
+                    obs_new, device=self.device).to(torch.float)   
+                reward = torch.tensor(
+                    reward, device=self.device).to(torch.float)              
+                self.buffer.store(obs, actions, reward, obs_new, done)
+                obs = obs_new
+            
+            total_reward += reward
+
+        # Average reward per step for this rollout
+        avg_reward = total_reward.mean().item() / self.t_steps
+        return avg_reward
+    
     def update(self, episode):
 
         # Updates for on policy
@@ -221,67 +305,6 @@ class Agent():
             self.rl_alg.exploration_rate  = max(self.rl_alg.exploration_rate  * 0.985, 0.05)
 
         return loss_policy, loss_critic
-
-    def rollout_disc(self, obs):
-        # Rollout for t timesteps
-        for t in range(self.t_steps):
-
-            # Step 1: forward pass on the actor and critic to get action and value
-            with torch.no_grad() if self.rl_alg.need_grad == False else torch.enable_grad():
-                logits = self.rl_alg.policy(obs)
-
-            # Step 2: create a distribution from the logits (raw outputs) and sample from it
-            probs = Categorical(logits=logits)
-            actions = probs.sample()
-            log_probs = probs.log_prob(actions)
-
-            # Step 3: take the action in the environment, using the action as a control command to the robot model.
-            obs_new, reward, done, truncated, infos = self.env.step(
-                actions.numpy())
-            done = done | truncated  # Change done if the episode is truncated
-
-            # Step 4: store data in traj_data
-            self.traj_data.store(t, obs, actions, reward, log_probs, done)
-            obs = torch.tensor(obs_new, device=self.device).to(torch.float)
-
-    def rollout_cont(self, obs):
-        total_reward = 0
-
-        # Rollout for t timesteps
-        for t in range(self.t_steps):
-
-            # Get an action from the policy based on the current observation
-            actions, log_probs, _ = GetAction(self.rl_alg, obs, target=False, grad = self.rl_alg.need_grad, noisy = self.rl_alg.need_noisy)
-
-            # Take the action in the environment
-            obs_new, reward, done, truncated, infos = self.env.step(
-                actions.cpu().numpy())
-            done = done | truncated  # Change done if the episode is truncated
-
-            # Store data in traj_data or buffer
-            if self.rl_alg.on_off_policy == "on":
-
-                # traj data needs numpy not tensors
-                self.traj_data.store(t, obs, actions, reward*0.1, log_probs, done)
-                reward = torch.tensor(
-                    reward, device=self.device).to(torch.float)                
-                obs = torch.tensor(obs_new, device=self.device).to(torch.float)
-
-            elif self.rl_alg.on_off_policy == "off": # Use a buffer for off policy
-
-                # Buffer needs tensors not numpy
-                obs_new = torch.tensor(
-                    obs_new, device=self.device).to(torch.float)   
-                reward = torch.tensor(
-                    reward, device=self.device).to(torch.float)              
-                self.buffer.store(obs, actions, reward, obs_new, done)
-                obs = obs_new
-            
-            total_reward += reward
-
-        # Average reward per step for this rollout
-        avg_reward = total_reward.mean().item() / self.t_steps
-        return avg_reward
 
 ############################# ADVERSARIAL #####################################
     def train_adv(self, adversary, player_identifier):

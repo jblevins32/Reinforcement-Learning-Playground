@@ -15,11 +15,12 @@ def CreateEnv(operation):
         config["rl_alg_name"] = args.rl_alg
 
     # Render the training env if called for in flag
-    if args.render_training:
+    if args.render:
         render_mode_env_zero = "human"
     else:
         render_mode_env_zero = "rgb_array"
 
+    # Domain randomization stuff
     if args.alter_gravity is not None:
         alter_gravity = args.alter_gravity
     else: alter_gravity = 1
@@ -74,6 +75,8 @@ def CreateEnv(operation):
         env = DomainRandomize(env, alter_gravity, alter_friction)
             
     elif operation == "test":
+        writer = None
+
         if gym_model == "MRPP_Env":
             env = gym.make(gym_model, render_mode="rgb_array", **config)
             n_actions = env.action_space.shape[0]*env.action_space.shape[1]
