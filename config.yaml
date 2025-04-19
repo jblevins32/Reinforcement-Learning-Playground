@@ -7,13 +7,16 @@ save_every: 100 # How many episodes to save the model (or adv_iters for adversar
 discount: 0.99
 lr: .0003
 rl_alg_name: "DDPG"
-gym_model: "Ant-v5" 
+gym_model: "Ant-v5-hfield" 
 load_dict: False # Load a model from a dictionary
 load_path: "InvertedPendulum-v5_DDPG_0.984_2025-04-10_16-14.pth" # Load model path
 
 # Testing specific parameters
-test_model: "Ant-v5_DDPG_-0.48251_2025-04-17_19-11.pth"
+test_model: "Ant-v5_DDPG_1.38703_2025-04-18_01-17_normal_gravity_normal_friction.pth"
+gym_model_test: "Ant-v5-hfield"
 test_steps: 200
+num_tests: 100
+record_period: 50
 
 ### Current env options:
 # Humanoid-v5 
@@ -22,6 +25,7 @@ test_steps: 200
 # MountainCar-v0 
 # CartPole-v1 
 # Ant-v5 
+# "Ant-v5-hfield" 
 # Swimmer-v5
 # MRPP_Env
 

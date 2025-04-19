@@ -32,7 +32,8 @@ def CreateEnv(operation):
     alter_plot_name = args.alter_plot_name
 
     # For testing on env specifically in chosen test model
-    gym_model = config['test_model'].split('_')[0]
+    # gym_model = config['test_model'].split('_')[0]
+    gym_model = config['gym_model_test']
 
     # Create environment
     if operation == "train":
