@@ -1,4 +1,5 @@
 ############### REGULAR TRAINING/TESTING ###############
+
 # Training specific parameters
 num_environments: 48
 episodes: 4000 # 4000 - normal, 250 - adversarial
@@ -8,6 +9,7 @@ discount: 0.99
 lr: .0003
 rl_alg_name: "DDPG"
 gym_model: "Ant-v5-hfield" 
+
 load_dict: False # Load a model from a dictionary
 load_path: "InvertedPendulum-v5_DDPG_0.984_2025-04-10_16-14.pth" # Load model path
 
@@ -17,6 +19,8 @@ gym_model_test: "Ant-v5-hfield"
 test_steps: 200
 num_tests: 100
 record_period: 50
+
+#######################################################
 
 ### Current env options:
 # Humanoid-v5 

@@ -23,7 +23,7 @@ def GetArgs():
     parser.add_argument('--disturb_limit', type=float, default=None, help="Set a random disturb force limit for domain randomization")
     parser.add_argument('--disturb_rate', type=float, default=None, help="Set a random disturb rate for domain randomization. 1 = 100%, 0 = 0%")
     parser.add_argument('--alter_plot_name', type=str, default=None, help="Set a unique name for this plot in tensorboard")
-    parser.add_argument('--model', type=str, default=None, help="Set a model to use for training")
+    parser.add_argument('--model', type=str, default=None, help="Set a model to use for testing")
 
     args = parser.parse_args()
 
