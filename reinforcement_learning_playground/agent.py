@@ -6,6 +6,13 @@ import time
 from datetime import datetime
 import numpy as np
 from torch.distributions import Categorical
+from gymnasium.spaces import Discrete, Box
+from get_action import GetAction
+from get_params_args import *
+from domain_rand import Randomdisturbs
+from timer import units
+from tensorboard_setup import get_log_dir
+
 from RL_algorithms.reinforce import *
 from RL_algorithms.vpg import *
 from RL_algorithms.ppo_disc import *
@@ -13,12 +20,8 @@ from RL_algorithms.ppo import *
 from RL_algorithms.sac import *
 from RL_algorithms.ddpg import *
 from RL_algorithms.td3 import *
-from gymnasium.spaces import Discrete, Box
-from get_action import GetAction
-from get_params_args import *
-from domain_rand import Randomdisturbs
-from timer import units
 
+from stable_baselines3 import DDPG as SB3_DDPG
 
 ############################################################################################################
 
@@ -82,6 +85,9 @@ class Agent():
             self.rl_alg = PPO(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
         elif self.rl_alg_name =="TD3":
             self.rl_alg = TD3(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
+        elif self.rl_alg_name == "SB3_DDPG":
+            self.rl_alg = SB3_DDPG("MlpPolicy", env, verbose=1, learning_rate=self.lr, buffer_size=1000000, batch_size=256, tau=0.1, gamma=self.gamma, tensorboard_log=get_log_dir(self.gym_model, self.rl_alg_name, self.alter_plot_name))
+            self.rl_alg.learn(total_timesteps=1000000, tb_log_name=get_log_dir(self.gym_model, self.rl_alg_name, self.alter_plot_name))  # Initialize the model without training
 
         # Load state dictionary if continuing training
         if self.load_dict:

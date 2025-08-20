@@ -1,14 +1,15 @@
 ############### REGULAR TRAINING/TESTING ###############
 
 # Training specific parameters
-num_environments: 48
+num_environments: 2
 episodes: 4000 # 4000 - normal, 250 - adversarial
-t_steps: 500 # Number of rollouts per episode
+t_steps: 500 # Number of rollouts per episode 500-ant
 save_every: 100 # How many episodes to save the model (or adv_iters for adversarial training)
 discount: 0.99
 lr: .0003
-rl_alg_name: "DDPG"
-gym_model: "Ant-v5-hfield" 
+rl_alg_name: "SB3_DDPG" # "SAC", "PPO", "DDPG", "TD3", "SB3_DDPG"
+gym_model: "Ant-v5" # "InvertedPendulum-v5" "Ant-v5-hfield" "HalfCheetah-v5" "Humanoid-v5" "Pusher-v5" "MountainCar-v0" "CartPole-v1" "Swimmer-v5"
+render_mode_env_zero: False # Render environment 0 during training?
 
 load_dict: False # Load a model from a dictionary
 load_path: "InvertedPendulum-v5_DDPG_0.984_2025-04-10_16-14.pth" # Load model path
@@ -19,6 +20,15 @@ gym_model_test: "Ant-v5-hfield"
 test_steps: 200
 num_tests: 100
 record_period: 50
+
+#######################################################
+
+# Domain Randomization parameters
+alter_gravity: False
+alter_friction: False
+alter_plot_name: "no-mods" # "normal_gravity", "normal_friction", "altered_gravity", "altered_friction", "altered_both"
+disturb_limit: 0 # Limit for the disturbance, 0 means no disturbance
+disturb_rate: 0 # Rate of disturbance, 0 means no disturbance
 
 #######################################################
 
@@ -48,12 +58,12 @@ adv_iter: 40
 # General
 num_agents: 2
 agent_radius: .5
-map_size: [100,50]
-num_obstacles: 5
+map_size: [10,10]
+num_obstacles: 0
 obstacle_radius_max: 15
 dynamics: "single_integrator"  # "unicycle" or "double_integrator"
 dt: 0.01
-w_dist: 1
+w_dist: 5
 w_coll: 5
 w_dir: 5
 w_goal: 1

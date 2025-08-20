@@ -62,5 +62,7 @@ This repo holds my Reinforcement Learning algorithms and research which are run 
     - `--alter_gravity`: Set a model to use for testing
     - Rest same as training
 
-
+## Running sb3:
+- run `tensorboard --logdir '/home/jblevins32/RL_playground/tensorboard/Ant-v5/SB3_DDPG/no-mods_1'` in terminal
+- in another terminal, run the training with rl_alg_name set as sb3 model
 

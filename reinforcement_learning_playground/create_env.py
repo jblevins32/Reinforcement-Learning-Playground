@@ -3,6 +3,9 @@ from get_params_args import *
 from tensorboard_setup import *
 from gymnasium.spaces import Box
 from domain_rand import DomainRandomize
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 def CreateEnv(operation):
 
@@ -22,35 +25,55 @@ def CreateEnv(operation):
 
         # Isolate the first env for human rendering in mujoco if desired
         envs = []
-        for idx in range(config['num_environments']):
-            if idx == 0:
-                envs.append(lambda: gym.make(config['gym_model'], render_mode=config["render_mode_env_zero"]))
+        if config["rl_alg_name"][0:3] != "SB3":
+            for idx in range(config['num_environments']):
+                if idx == 0:
+                    envs.append(lambda: gym.make(config['gym_model'], render_mode=config["render_mode_env_zero"]))
+                else:
+                    envs.append(lambda: gym.make(config['gym_model'], render_mode="rgb_array"))
+
+            env = gym.vector.SyncVectorEnv(envs)
+
+            # Define the space as cont or disc to get the correct actions and obs spaces
+            if isinstance(env.action_space, Box):
+                space = "cont"
+            else: space = "disc"
+
+            if space == "cont":
+                n_actions = env.action_space.shape[1]
+                n_obs = env.observation_space.shape[1]
             else:
-                envs.append(lambda: gym.make(config['gym_model'], render_mode="rgb_array"))
+                n_actions = 2 # 2 for cart-pole
+                n_obs = env.observation_space.shape[1]
 
-        env = gym.vector.SyncVectorEnv(envs)
+            if config['gym_model'] == "MRPP_Env":
+                n_actions = env.action_space.shape[1]*env.action_space.shape[2]
+                n_obs = env.observation_space.shape[1]*env.observation_space.shape[2]
 
-        # env = gym.vector.SyncVectorEnv([lambda: gym.make(config['gym_model'], render_mode="rgb_array") for _ in range(config['num_environments'])])
-                
-        # Define the space as cont or disc to get the correct actions and obs spaces
-        if isinstance(env.action_space, Box):
-            space = "cont"
-        else: space = "disc"
+            # Domain randomization, don't worry about for custom sim right now
+            if config['gym_model'] != "MRPP_Env":
+                env = DomainRandomize(env, config["alter_gravity"], config["alter_friction"])
 
-        if space == "cont":
-            n_actions = env.action_space.shape[1]
-            n_obs = env.observation_space.shape[1]
         else:
-            n_actions = 2 # 2 for cart-pole
-            n_obs = env.observation_space.shape[1]
+            def make_env_thunk(i):
+                def _thunk():
+                    # match your render-mode logic
+                    render_mode = config["render_mode_env_zero"] if i == 0 else "rgb_array"
+                    env = gym.make(config['gym_model'], render_mode=render_mode)
 
-        if config['gym_model'] == "MRPP_Env":
-            n_actions = env.action_space.shape[1]*env.action_space.shape[2]
-            n_obs = env.observation_space.shape[1]*env.observation_space.shape[2]
+                    # apply your per-env domain randomization here (not on a vector env)
+                    # if config['gym_model'] != "MRPP_Env":
+                    #     env = DomainRandomize(env, config["alter_gravity"], config["alter_friction"])
 
-        # Domain randomization, don't worry about for custom sim right now
-        if config['gym_model'] != "MRPP_Env":
-            env = DomainRandomize(env, config["alter_gravity"], config["alter_friction"])
+                    # Monitor is recommended for SB3 (episode stats)
+                    env = Monitor(env)
+                    return env
+                return _thunk
+            
+            env = SubprocVecEnv([make_env_thunk(i) for i in range(config["num_environments"])])
+
+            n_actions = env.action_space.shape[0]
+            n_obs = env.observation_space.shape[0]
             
     elif operation == "test":
         writer = None
