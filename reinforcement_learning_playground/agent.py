@@ -17,8 +17,7 @@ from gymnasium.spaces import Discrete, Box
 from get_action import GetAction
 from get_params_args import *
 from domain_rand import Randomdisturbs
-import warnings
-
+from timer import units
 
 
 ############################################################################################################
@@ -51,6 +50,11 @@ class Agent():
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
         
+        # Domain Randomization parameters
+        self.alter_plot_name = kwargs.get('alter_plot_name', 'no-mods')
+        self.disturb_limit = kwargs.get('disturb_limit', 0)
+        self.disturb_rate = kwargs.get('disturb_rate', 0)
+
         # Define the space as cont of disc
         if isinstance(self.env.action_space, Box):
             self.space = "cont"
@@ -90,29 +94,6 @@ class Agent():
         elif self.rl_alg.on_off_policy == "on":
             self.traj_data = TrajData(n_steps=self.t_steps, n_envs=self.num_environments,
                                       n_obs=n_obs, n_actions=n_actions, space=self.space)
-        
-        # For naming the models with their unique env modifications
-        args = GetArgs()
-        if args.alter_plot_name is not None:
-            self.env_modifications = args.alter_plot_name
-        else:
-            self.env_modifications = 'no-mods'
-
-        # Add disturbs to the model for domain randomization
-        args = GetArgs()
-        if args.disturb_limit is not None:
-            self.disturb_limit = args.disturb_limit
-        else: 
-            self.disturb_limit = 0
-            if args.disturb_rate is not None:
-                warnings.warn("disturb rate chosen, but no disturb limit. No disturb will be applied.")
-        if args.disturb_rate is not None:
-            self.disturb_rate = args.disturb_rate
-        else:
-            self.disturb_rate = 0
-            if args.disturb_limit is not None:
-                warnings.warn("disturb limit chosen, but no disturb rate. No disturb will be applied.")
-
 
     def train(self):
 
@@ -141,20 +122,26 @@ class Agent():
             loss_to_log_critic = round(loss_critic.item(),5)
 
             # Update tensorboard and terminal
-            self.writer.add_scalar("reward", reward_to_log, episode)
+            self.writer.add_scalar("episodic reward", reward_to_log, episode)
             self.writer.add_scalar("loss/policy", loss_to_log_policy, episode)
             self.writer.add_scalar("loss/critic", loss_to_log_critic, episode)
+            self.writer.add_scalar("exploration rate", self.rl_alg.exploration_rate, episode)
             self.writer.flush()
 
             episode_runtime = time.time()-time_start_episode
             total_runtime = time.time()-time_start_train
             episode_runtime_avg = total_runtime/(episode+1)
-            print(f"Completed episode {episode + 1}: Total runtime {np.round(total_runtime/60,3)}/{np.round(self.episodes*episode_runtime_avg/60,3)} min, {np.round(100*total_runtime/(self.episodes*episode_runtime_avg),4)}% done, episode runtime {np.round(episode_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}, Critic Loss: {loss_to_log_critic}")
+            if episode > 4:
+                total_runtime_estimate = np.round(self.episodes*episode_runtime_avg,3)
+            else:
+                total_runtime_estimate = 0
+                print(f"{5-episode} more episodes to estimate total runtime")
+            print(f"Episode {episode + 1}: Total runtime {units(total_runtime)}/{units(total_runtime_estimate)}, {np.round(100*total_runtime/(self.episodes*episode_runtime_avg),4)}% done, episode runtime {np.round(episode_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}, Critic Loss: {loss_to_log_critic}")
 
             # Save the model iteratively, naming based on final reward
             if ((episode + 1) % self.save_every == 0) and episode != 0:
                 model_dir = os.path.join(
-                    root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}_{self.env_modifications}.pth")
+                    root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}_{self.alter_plot_name}.pth")
                 os.makedirs(os.path.join(root_dir, "models"), exist_ok=True)
                 torch.save(self.rl_alg.state_dict(), model_dir)
                 print('Policy saved at', model_dir)
@@ -184,7 +171,7 @@ class Agent():
     def rollout_cont(self, obs):
         total_reward = 0
 
-        # Create vector of disturb times to perturb the agent in the rollout
+        # If disturb rate is set, create a random vector of disturb times to perturb the agent in the rollout
         t_disturbed = np.random.uniform(0,1,size=self.t_steps) < self.disturb_rate
 
         # Rollout for t timesteps
@@ -203,6 +190,8 @@ class Agent():
             done = done | truncated  # Change done if the episode is truncated
 
             # Store data in traj_data or buffer
+
+            # Use traj_data for on-policy
             if self.rl_alg.on_off_policy == "on":
 
                 # traj data needs numpy not tensors
@@ -210,8 +199,9 @@ class Agent():
                 reward = torch.tensor(
                     reward, device=self.device).to(torch.float)                
                 obs = torch.tensor(obs_new, device=self.device).to(torch.float)
-
-            elif self.rl_alg.on_off_policy == "off": # Use a buffer for off policy
+            
+            # Use a buffer for off policy
+            elif self.rl_alg.on_off_policy == "off": 
 
                 # Buffer needs tensors not numpy
                 obs_new = torch.tensor(
@@ -302,7 +292,7 @@ class Agent():
         
         # Update exploration rate, keeping it above 0.05
         if self.rl_alg.explore is True:
-            self.rl_alg.exploration_rate  = max(self.rl_alg.exploration_rate  * 0.985, 0.05)
+            self.rl_alg.exploration_rate  = max(self.rl_alg.exploration_rate  * 0.99, 0.05)
 
         return loss_policy, loss_critic
 
