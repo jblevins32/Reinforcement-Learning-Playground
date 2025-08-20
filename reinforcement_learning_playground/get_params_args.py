@@ -4,7 +4,7 @@ import yaml
 import argparse
 import warnings
 
-def GetParams(args):
+def GetParams():
 
     # Load parameters from config.yaml
     config_dir = os.path.join(root_dir, "config.yaml")
@@ -12,6 +12,8 @@ def GetParams(args):
         config = yaml.safe_load(read_file)
 
     ### Replace config variables if args are given to replace them
+    args = GetArgs()
+
     # Replace rl_alg with argument choice if there is one
     if args.rl_alg is not None:
         config["rl_alg_name"] = args.rl_alg
@@ -51,7 +53,7 @@ def GetParams(args):
         if args.disturb_limit is not None:
             warnings.warn("disturb limit chosen, but no disturb rate. No disturb will be applied.")
 
-    return config
+    return config, args
 
 def GetArgs():
     parser = argparse.ArgumentParser()

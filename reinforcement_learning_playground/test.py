@@ -14,8 +14,7 @@ from create_env import CreateEnv
 from agent import Agent
 from get_action import GetAction
 
-config = GetParams()
-args = GetArgs()
+config, args = GetParams()
 
 # Overwrite model file from args else use params from config
 if args.model is not None:
@@ -90,7 +89,7 @@ for test in range(config['num_tests']):
         # print(f'step taken {count_steps}')
         done = done or truncated
 
-    print(f'Test episode {test} total reward {total_reward_ep}')
+    print(f'Eval episode {test} total reward {total_reward_ep}')
     reward_runs.append(total_reward_ep)
     env.close()
 

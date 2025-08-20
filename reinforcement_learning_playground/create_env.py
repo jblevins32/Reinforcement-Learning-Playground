@@ -7,8 +7,7 @@ from domain_rand import DomainRandomize
 def CreateEnv(operation):
 
     # Import args from flags and parameters from config.yaml
-    args = GetArgs()
-    config = GetParams(args)
+    config, args = GetParams()
 
     # For testing on env specifically in chosen test model
     # gym_model = config['test_model'].split('_')[0]
