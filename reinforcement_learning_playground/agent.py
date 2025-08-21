@@ -87,7 +87,6 @@ class Agent():
             self.rl_alg = TD3(input_dim=n_obs, output_dim=n_actions, lr=self.lr)
         elif self.rl_alg_name == "SB3_DDPG":
             self.rl_alg = SB3_DDPG("MlpPolicy", env, verbose=1, learning_rate=self.lr, buffer_size=1000000, batch_size=256, tau=0.1, gamma=self.gamma, tensorboard_log=get_log_dir(self.gym_model, self.rl_alg_name, self.alter_plot_name))
-            self.rl_alg.learn(total_timesteps=1000000, tb_log_name=get_log_dir(self.gym_model, self.rl_alg_name, self.alter_plot_name))  # Initialize the model without training
 
         # Load state dictionary if continuing training
         if self.load_dict:
@@ -102,55 +101,64 @@ class Agent():
                                       n_obs=n_obs, n_actions=n_actions, space=self.space)
 
     def train(self):
+        total_steps = self.episodes * self.t_steps * self.num_environments
 
-        time_start_train = time.time()
+        # SB3 training
+        if self.rl_alg_name[0:3] == "SB3":
+            self.rl_alg.learn(total_timesteps=total_steps, tb_log_name=get_log_dir(self.gym_model, self.rl_alg_name, self.alter_plot_name))  # Initialize the model without training
 
-        # Running for n episodes
-        for episode in range(self.episodes):
+        # My training
+        else:
+            time_start_train = time.time()
+            print(f"Training for {total_steps} steps")
 
-            time_start_episode = time.time()
+            # Running for n episodes
+            for episode in range(self.episodes):
 
-            # Reset the environment at beginning of each episode
-            obs, _ = self.env.reset()
-            obs = torch.tensor(obs, device=self.device).to(torch.float)
+                time_start_episode = time.time()
 
-            # Rollout
-            if self.space == "cont":
-                avg_reward = self.rollout_cont(obs)
-            elif self.space == "disc":
-                self.rollout_disc(obs)
+                # Reset the environment at beginning of each episode
+                obs, _ = self.env.reset()
+                obs = torch.tensor(obs, device=self.device).to(torch.float)
 
-            # Update parameters
-            loss_policy, loss_critic = self.update(episode)
-            
-            reward_to_log = round(avg_reward,5)
-            loss_to_log_policy = round(loss_policy.item(),5)
-            loss_to_log_critic = round(loss_critic.item(),5)
+                # Rollout
+                if self.space == "cont":
+                    avg_reward = self.rollout_cont(obs)
+                elif self.space == "disc":
+                    self.rollout_disc(obs)
 
-            # Update tensorboard and terminal
-            self.writer.add_scalar("episodic reward", reward_to_log, episode)
-            self.writer.add_scalar("loss/policy", loss_to_log_policy, episode)
-            self.writer.add_scalar("loss/critic", loss_to_log_critic, episode)
-            self.writer.add_scalar("exploration rate", self.rl_alg.exploration_rate, episode)
-            self.writer.flush()
+                # Update parameters
+                loss_policy, loss_critic = self.update(episode)
+                
+                reward_to_log = round(avg_reward,5)
+                loss_to_log_policy = round(loss_policy.item(),5)
+                loss_to_log_critic = round(loss_critic.item(),5)
 
-            episode_runtime = time.time()-time_start_episode
-            total_runtime = time.time()-time_start_train
-            episode_runtime_avg = total_runtime/(episode+1)
-            if episode > 4:
-                total_runtime_estimate = np.round(self.episodes*episode_runtime_avg,3)
-            else:
-                total_runtime_estimate = 0
-                print(f"{5-episode} more episodes to estimate total runtime")
-            print(f"Episode {episode + 1}: Total runtime {units(total_runtime)}/{units(total_runtime_estimate)}, {np.round(100*total_runtime/(self.episodes*episode_runtime_avg),4)}% done, episode runtime {np.round(episode_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}, Critic Loss: {loss_to_log_critic}")
+                # Update tensorboard and terminal
+                total_steps_curr = (episode+1)*self.t_steps*self.num_environments
+                self.writer.add_scalar("episodic reward", reward_to_log, total_steps_curr)
+                self.writer.add_scalar("loss/policy", loss_to_log_policy, total_steps_curr)
+                self.writer.add_scalar("loss/critic", loss_to_log_critic, total_steps_curr)
+                self.writer.add_scalar("exploration rate", self.rl_alg.exploration_rate, total_steps_curr)
+                self.writer.flush()
 
-            # Save the model iteratively, naming based on final reward
-            if ((episode + 1) % self.save_every == 0) and episode != 0:
-                model_dir = os.path.join(
-                    root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{reward_to_log}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}_{self.alter_plot_name}.pth")
-                os.makedirs(os.path.join(root_dir, "models"), exist_ok=True)
-                torch.save(self.rl_alg.state_dict(), model_dir)
-                print('Policy saved at', model_dir)
+                episode_runtime = time.time()-time_start_episode
+                total_runtime = time.time()-time_start_train
+                episode_runtime_avg = total_runtime/(episode+1)
+                if episode > 4:
+                    total_runtime_estimate = np.round(self.episodes*episode_runtime_avg,3)
+                else:
+                    total_runtime_estimate = 0
+                    print(f"{5-episode} more episodes to estimate total runtime")
+                print(f"Episode {episode + 1}, Step {total_steps_curr}: Total runtime {units(total_runtime)}/{units(total_runtime_estimate)}, {np.round(100*total_runtime/(self.episodes*episode_runtime_avg),4)}% done, episode runtime {np.round(episode_runtime,3)} sec, Reward: {reward_to_log}, Policy Loss: {loss_to_log_policy}, Critic Loss: {loss_to_log_critic}")
+
+                # Save the model iteratively, naming based on final reward
+                if ((episode + 1) % self.save_every == 0) and episode != 0:
+                    model_dir = os.path.join(
+                        root_dir, "models", f"{self.gym_model}_{self.rl_alg.name}_{datetime.now().strftime('%Y-%m-%d_%H-%M')}_{self.alter_plot_name}_reward_{reward_to_log}.pth")
+                    os.makedirs(os.path.join(root_dir, "models"), exist_ok=True)
+                    torch.save(self.rl_alg.state_dict(), model_dir)
+                    print('Policy saved at', model_dir)
 
     def rollout_disc(self, obs):
         # Rollout for t timesteps

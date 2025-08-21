@@ -22,6 +22,7 @@ class PPO(nn.Module):
         self.need_noisy = False
         self.policy_update_delay = 1 # This is no delay, update every episode
         self.epsilon = 0.2
+        self.exploration_rate = 1
         self.device = torch.device(
             "cuda") if torch.cuda.is_available() else torch.device("cpu")
 

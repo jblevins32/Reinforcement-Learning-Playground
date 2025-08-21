@@ -2,12 +2,12 @@
 
 # Training specific parameters
 num_environments: 2
-episodes: 4000 # 4000 - normal, 250 - adversarial
-t_steps: 500 # Number of rollouts per episode 500-ant
+episodes: 1000 # 4000 - normal, 250 - adversarial
+t_steps: 1000 # Number of rollouts per episode 500-ant
 save_every: 100 # How many episodes to save the model (or adv_iters for adversarial training)
 discount: 0.99
 lr: .0003
-rl_alg_name: "SB3_DDPG" # "SAC", "PPO", "DDPG", "TD3", "SB3_DDPG"
+rl_alg_name: "PPO" # "SAC", "PPO", "DDPG", "TD3", "SB3_DDPG"
 gym_model: "Ant-v5" # "InvertedPendulum-v5" "Ant-v5-hfield" "HalfCheetah-v5" "Humanoid-v5" "Pusher-v5" "MountainCar-v0" "CartPole-v1" "Swimmer-v5"
 render_mode_env_zero: False # Render environment 0 during training?
 
@@ -15,11 +15,11 @@ load_dict: False # Load a model from a dictionary
 load_path: "InvertedPendulum-v5_DDPG_0.984_2025-04-10_16-14.pth" # Load model path
 
 # Testing specific parameters
-test_model: "Ant-v5_DDPG_1.38703_2025-04-18_01-17_normal_gravity_normal_friction.pth"
-gym_model_test: "Ant-v5-hfield"
-test_steps: 200
-num_tests: 100
-record_period: 50
+test_model: "Ant-v5_DDPG_0.8912_2025-08-21_13-05_no-mods.pth"
+gym_model_test: "Ant-v5"
+test_steps: 1000
+num_tests: 50
+record_period: 50 # how often to record a video
 
 #######################################################
 
